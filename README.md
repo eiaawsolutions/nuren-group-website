@@ -1,20 +1,43 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# Nuren Group Corporate Website
 
-# Run and deploy your AI Studio app
+This project is a React-based corporate website for Nuren Group, built with Vite, Tailwind CSS, and Framer Motion.
 
-This contains everything you need to run your app locally.
+## Deployment on Netlify
 
-View your app in AI Studio: https://ai.studio/apps/ef1a0572-09f3-44dc-b255-ea5498f5f55f
+To deploy this project on Netlify, follow these steps:
 
-## Run Locally
+1. **Push your code to a Git repository** (GitHub, GitLab, or Bitbucket).
+2. **Connect your repository to Netlify**:
+   - Log in to [Netlify](https://www.netlify.com/).
+   - Click "Add new site" > "Import an existing project".
+   - Select your Git provider and the repository.
+3. **Configure Build Settings**:
+   - **Build command**: `npm run build`
+   - **Publish directory**: `dist`
+   - (These settings are already provided in the `netlify.toml` file).
+4. **Set Environment Variables**:
+   - Go to "Site settings" > "Environment variables".
+   - Add `GEMINI_API_KEY` with your actual Gemini API key.
+5. **Deploy**: Click "Deploy site".
 
-**Prerequisites:**  Node.js
+## Project Structure
 
+- `src/App.tsx`: Main application component containing all sections (Hero, Products, Newsroom, etc.).
+- `src/index.css`: Global styles including Tailwind CSS imports and theme configuration.
+- `netlify.toml`: Configuration for Netlify deployment, including build settings and SPA redirects.
+- `vite.config.ts`: Vite configuration with environment variable handling and aliases.
+
+## Local Development
 
 1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+   ```bash
+   npm install
+   ```
+2. Start the development server:
+   ```bash
+   npm run dev
+   ```
+3. Build for production:
+   ```bash
+   npm run build
+   ```
