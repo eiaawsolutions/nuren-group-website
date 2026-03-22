@@ -204,7 +204,7 @@ const Hero = () => {
           >
             <div className="relative z-10 rounded-3xl overflow-hidden shadow-2xl border-8 border-white">
               <img 
-                src="https://picsum.photos/seed/nuren-family/800/600" 
+                src="https://images.unsplash.com/photo-1592610303798-242168819445?auto=format&fit=crop&w=800&q=80" 
                 alt="Happy Family" 
                 className="w-full h-auto"
                 referrerPolicy="no-referrer"
@@ -286,54 +286,60 @@ const Products = () => {
     { 
       name: 'Motherhood.com.my', 
       desc: 'The leading parenting marketplace and community in Malaysia.',
-      image: 'https://picsum.photos/seed/motherhood/400/300',
+      image: '/newmom.png',
       platformLink: 'https://motherhood.com.my',
     },
     { 
       name: 'Kelabmama', 
       desc: 'A trusted content hub for mothers sharing advice and stories.',
-      image: 'https://picsum.photos/seed/kelabmama/400/300',
+      image: 'https://images.unsplash.com/photo-1511632765486-a01980e01a18?auto=format&fit=crop&w=800&q=80',
       platformLink: 'https://kelabmama.com',
     },
     { 
       name: 'Ibuencer.com', 
       desc: 'The largest influencer platform connecting brands with mom-influencers.',
-      image: 'https://picsum.photos/seed/ibuencer/400/300',
+      image: '/ibuencer.png',
       platformLink: 'https://www.ibuencer.com/',
       videoLink: 'https://youtu.be/5JZt0qRkPsQ?si=9qvCEB4hZ2Hv4vOQ'
     },
     { 
       name: 'Parentcraft', 
       desc: 'Empowering parents with essential skills and knowledge.',
-      image: 'https://picsum.photos/seed/parentcraft/400/300',
+      image: '/parentcraft.png',
       platformLink: 'https://www.motherhood.com.my/parentcraft',
       videoLink: 'https://youtu.be/RZ8iwTcbrwA?si=hqO_--EemJxj7r26'
     },
     { 
       name: 'Ask Me Doctor', 
       desc: 'Expert medical advice and healthcare information for families.',
-      image: 'https://picsum.photos/seed/askmedoctor/400/300',
+      image: '/askmeDoctor.jpg',
       platformLink: 'https://home.motherhood.com.my/',
       videoLink: 'https://youtu.be/PquKkf4wM14?si=1uFO1G2aR2T9e_1F'
     },
     { 
       name: 'Motherhood Choice Award', 
       desc: 'Celebrating the best brands as voted by mothers.',
-      image: 'https://picsum.photos/seed/choiceaward/400/300',
+      image: 'https://images.unsplash.com/photo-1578262825743-a4e402caab76?auto=format&fit=crop&w=800&q=80',
       platformLink: 'https://www.motherhood.com.my/motherhood-award-2025',
       videoLink: 'https://youtu.be/4mkAcSU5GF4?si=HfcHyfn-RFzFKQKQ'
     },
     { 
       name: 'Nuren.asia', 
       desc: 'A vibrant female lifestyle platform tailored for Gen Z and young women.',
-      image: 'https://picsum.photos/seed/nurenasia/400/300',
+      image: 'https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=800&q=80',
       platformLink: 'https://nuren.asia/',
     },
     { 
       name: 'Motherhood SuperApp', 
       desc: 'The ultimate parenting companion app for modern mothers.',
-      image: 'https://picsum.photos/seed/superapp/400/300',
+      image: '/MotherhoodSuperapp.png',
       platformLink: 'https://m.motherhood.com.my/',
+    },
+    { 
+      name: 'Superkids', 
+      desc: 'Engaging content and activities for children and their development.',
+      image: '/superkids.png',
+      platformLink: 'https://www.motherhood.com.my/superkids',
     }
   ];
 
@@ -419,14 +425,14 @@ const CaseStudies = () => {
     {
       title: "Scott's reached 2 million mums via Ibuencer from Rainbow Gummies virtual launch",
       desc: "How Scott's leveraged the Ibuencer network to achieve massive reach and engagement for their new product launch.",
-      image: "https://picsum.photos/seed/scotts/800/600",
+      image: "https://images.unsplash.com/photo-1491438590914-bc09fcaaf77a?auto=format&fit=crop&w=800&q=80",
       link: "https://marketingmagazine.com.my/scotts-reached-2-million-mums-via-ibuencer-from-rainbow-gummies-virtual-launch/",
       tags: ["FMCG", "Influencer Marketing", "Launch"]
     },
     {
       title: "Motherhood Choice Awards: Driving Brand Trust & Sales",
       desc: "A look at how the annual awards program helps brands build long-term credibility with Southeast Asian mothers.",
-      image: "https://picsum.photos/seed/awards-case/800/600",
+      image: "https://images.unsplash.com/photo-1531058020387-3be344556be6?auto=format&fit=crop&w=800&q=80",
       link: "https://www.motherhood.com.my/motherhood-award-2025",
       tags: ["Awards", "Community", "Trust"]
     }
@@ -645,6 +651,12 @@ const Investors = () => {
       desc: 'Annual and periodic financial performance reports.', 
       link: 'https://www.nsx.com.au/marketdata/company-directory/announcements/NRN/',
       icon: <FileText className="text-emerald-600" />
+    },
+    { 
+      title: 'Board of Directors', 
+      desc: 'Meet the experienced leaders guiding Nuren Group strategy.', 
+      link: 'https://nurengroup.com/board-of-directors',
+      icon: <Users className="text-pink-600" />
     }
   ];
 
@@ -658,7 +670,7 @@ const Investors = () => {
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {investorLinks.map((item, idx) => (
             <motion.a 
               key={idx}
@@ -799,6 +811,99 @@ const BrandSolutions = () => {
   );
 };
 
+const BoardOfDirectors = () => {
+  return (
+    <section id="board" className="py-24 bg-slate-50">
+      <div className="max-w-7xl mx-auto px-6">
+        <div className="grid lg:grid-cols-2 gap-16 items-center">
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+          >
+            <h2 className="text-4xl font-bold text-slate-900 mb-6">Board of Directors</h2>
+            <p className="text-lg text-slate-600 mb-8 leading-relaxed">
+              Our Board of Directors comprises seasoned professionals with diverse backgrounds in technology, finance, and healthcare. They provide strategic oversight and guidance to ensure Nuren Group continues to lead the digital family ecosystem in Southeast Asia.
+            </p>
+            <div className="flex flex-col gap-4 mb-8">
+              <div className="flex items-start gap-4">
+                <div className="w-10 h-10 bg-nuren-pink/10 rounded-full flex items-center justify-center text-nuren-pink shrink-0">
+                  <CheckCircle2 size={20} />
+                </div>
+                <div>
+                  <h4 className="font-bold text-slate-900">Strategic Governance</h4>
+                  <p className="text-slate-500 text-sm">Ensuring long-term value for all stakeholders.</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-4">
+                <div className="w-10 h-10 bg-nuren-pink/10 rounded-full flex items-center justify-center text-nuren-pink shrink-0">
+                  <Globe size={20} />
+                </div>
+                <div>
+                  <h4 className="font-bold text-slate-900">Regional Expertise</h4>
+                  <p className="text-slate-500 text-sm">Deep understanding of the SEA market landscape.</p>
+                </div>
+              </div>
+            </div>
+            <a 
+              href="https://nurengroup.com/board-of-directors" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 bg-slate-900 text-white px-8 py-4 rounded-full font-bold hover:bg-slate-800 transition-all shadow-lg"
+            >
+              View Full Board
+              <ExternalLink size={20} />
+            </a>
+          </motion.div>
+          
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true }}
+            className="relative"
+          >
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-4">
+                <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
+                  <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600 mb-4">
+                    <Info size={24} />
+                  </div>
+                  <h4 className="font-bold text-slate-900">Market Insight</h4>
+                  <p className="text-xs text-slate-500">Public market experience on NSX & beyond.</p>
+                </div>
+                <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
+                  <div className="w-12 h-12 bg-purple-50 rounded-2xl flex items-center justify-center text-purple-600 mb-4">
+                    <Gavel size={24} />
+                  </div>
+                  <h4 className="font-bold text-slate-900">Compliance</h4>
+                  <p className="text-xs text-slate-500">Adhering to the highest ethical standards.</p>
+                </div>
+              </div>
+              <div className="space-y-4 pt-8">
+                <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
+                  <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-600 mb-4">
+                    <FileText size={24} />
+                  </div>
+                  <h4 className="font-bold text-slate-900">Reporting</h4>
+                  <p className="text-xs text-slate-500">Transparent financial and operational reporting.</p>
+                </div>
+                <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
+                  <div className="w-12 h-12 bg-orange-50 rounded-2xl flex items-center justify-center text-orange-600 mb-4">
+                    <Megaphone size={24} />
+                  </div>
+                  <h4 className="font-bold text-slate-900">Communication</h4>
+                  <p className="text-xs text-slate-500">Open dialogue with our investor community.</p>
+                </div>
+              </div>
+            </div>
+            <div className="absolute -z-10 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-nuren-pink/5 rounded-full blur-3xl" />
+          </motion.div>
+        </div>
+      </div>
+    </section>
+  );
+};
+
 const VisionSection = () => {
   return (
     <section id="vision" className="py-24">
@@ -912,6 +1017,7 @@ export default function App() {
         <CaseStudies />
         <Newsroom />
         <Investors />
+        <BoardOfDirectors />
         <VisionSection />
         
         {/* Call to Action Section */}
