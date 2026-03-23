@@ -285,61 +285,85 @@ const Products = () => {
   const products = [
     { 
       name: 'Motherhood.com.my', 
-      desc: 'The leading parenting marketplace and community in Malaysia.',
-      image: '/newmom.png',
+      desc: "Malaysia's #1 parenting marketplace and community, offering brands direct access to a high-intent audience of millions of parents.",
+      image: '/motherhood.jpg',
       platformLink: 'https://motherhood.com.my',
     },
     { 
       name: 'Kelabmama', 
-      desc: 'A trusted content hub for mothers sharing advice and stories.',
-      image: 'https://images.unsplash.com/photo-1511632765486-a01980e01a18?auto=format&fit=crop&w=800&q=80',
+      desc: 'A premium content ecosystem where brands can integrate into trusted narratives, reaching a loyal community of engaged mothers.',
+      image: '/Kelabmama.png',
       platformLink: 'https://kelabmama.com',
     },
     { 
       name: 'Ibuencer.com', 
-      desc: 'The largest influencer platform connecting brands with mom-influencers.',
+      desc: "The region's largest mom-influencer network, driving authentic brand advocacy and high-impact social commerce through 10,000+ creators.",
       image: '/ibuencer.png',
       platformLink: 'https://www.ibuencer.com/',
       videoLink: 'https://youtu.be/5JZt0qRkPsQ?si=9qvCEB4hZ2Hv4vOQ'
     },
     { 
       name: 'Parentcraft', 
-      desc: 'Empowering parents with essential skills and knowledge.',
+      desc: 'A specialized educational platform for brands to establish thought leadership and provide value-added skills to new and expecting parents.',
       image: '/parentcraft.png',
       platformLink: 'https://www.motherhood.com.my/parentcraft',
       videoLink: 'https://youtu.be/RZ8iwTcbrwA?si=hqO_--EemJxj7r26'
     },
     { 
       name: 'Ask Me Doctor', 
-      desc: 'Expert medical advice and healthcare information for families.',
+      desc: 'A high-trust medical advice platform where healthcare and wellness brands can connect with families through expert-led content.',
       image: '/askmeDoctor.jpg',
       platformLink: 'https://home.motherhood.com.my/',
       videoLink: 'https://youtu.be/PquKkf4wM14?si=1uFO1G2aR2T9e_1F'
     },
     { 
       name: 'Motherhood Choice Award', 
-      desc: 'Celebrating the best brands as voted by mothers.',
-      image: 'https://images.unsplash.com/photo-1578262825743-a4e402caab76?auto=format&fit=crop&w=800&q=80',
+      desc: "The gold standard of parenting excellence, providing brands with the ultimate seal of approval from Malaysia's largest voting community.",
+      image: '/motherhoodchoiceawards.jpg',
       platformLink: 'https://www.motherhood.com.my/motherhood-award-2025',
       videoLink: 'https://youtu.be/4mkAcSU5GF4?si=HfcHyfn-RFzFKQKQ'
     },
     { 
       name: 'Nuren.asia', 
-      desc: 'A vibrant female lifestyle platform tailored for Gen Z and young women.',
+      desc: 'A dynamic lifestyle platform for Gen Z and young women, offering brands a gateway to the next generation of female consumers.',
       image: 'https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=800&q=80',
       platformLink: 'https://nuren.asia/',
     },
     { 
       name: 'Motherhood SuperApp', 
-      desc: 'The ultimate parenting companion app for modern mothers.',
+      desc: 'A data-driven mobile companion that keeps your brand at the fingertips of modern parents throughout their daily parenting journey.',
       image: '/MotherhoodSuperapp.png',
       platformLink: 'https://m.motherhood.com.my/',
     },
     { 
       name: 'Superkids', 
-      desc: 'Engaging content and activities for children and their development.',
+      desc: "An interactive development hub where children's brands can engage families through creative content and educational activities.",
       image: '/superkids.png',
-      platformLink: 'https://www.motherhood.com.my/superkids',
+      platformLink: 'https://m.motherhood.com.my/superkid-infopage',
+    },
+    { 
+      name: 'New Mom Program', 
+      desc: 'A targeted loyalty ecosystem that allows brands to build long-term relationships with parents from the very start of their journey.',
+      image: '/newmom.png',
+      platformLink: 'https://www.motherhood.com.my/newmom-program',
+    },
+    { 
+      name: 'Money Smart Mama', 
+      desc: 'Empowering women with financial confidence, this program offers a unique space for financial and household brands to support family prosperity.',
+      image: '/moneysmartmama.jpg',
+      platformLink: 'https://www.motherhood.com.my/moneysmartmama',
+    },
+    { 
+      name: 'MamaCubaTry', 
+      desc: 'The ultimate sampling and social review engine, enabling brands to generate authentic feedback, UGC, and massive share of voice.',
+      image: '/mamacubatry.jpg',
+      platformLink: 'https://m.motherhood.com.my/mamacubatry-product',
+    },
+    { 
+      name: 'Creator Food Network', 
+      desc: 'A specialized culinary community connecting food and kitchen brands with passionate home cooks and family-focused food creators.',
+      image: '/Creatorfoodnetwork.jpg',
+      platformLink: 'https://nuren.asia/',
     }
   ];
 
