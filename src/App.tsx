@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
 import { 
   Users, 
   Store, 
@@ -25,7 +26,11 @@ import {
   Youtube,
   Instagram,
   Mic,
-  BookOpen
+  BookOpen,
+  Layers,
+  Network,
+  Database,
+  Share2
 } from 'lucide-react';
 
 // --- Components ---
@@ -82,6 +87,7 @@ const VideoModal = ({ isOpen, onClose, videoUrl }: { isOpen: boolean, onClose: (
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const location = useLocation();
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 20);
@@ -90,33 +96,44 @@ const Navbar = () => {
   }, []);
 
   const navLinks = [
-    { name: 'Home', href: '#' },
-    { name: 'Products', href: '#products' },
-    { name: 'For Brands', href: '#brands' },
-    { name: 'Case Studies', href: '#casestudies' },
-    { name: 'Newsroom', href: '#newsroom' },
-    { name: 'Investors', href: '#investors' },
-    { name: 'Vision', href: '#vision' },
+    { name: 'Home', href: '/' },
+    { name: 'Ecosystem', href: '/ecosystem' },
+    { name: 'Products', href: '/#products' },
+    { name: 'For Brands', href: '/#brands' },
+    { name: 'Case Studies', href: '/#casestudies' },
+    { name: 'Investors', href: '/#investors' },
   ];
 
+  const isHome = location.pathname === '/';
+
   return (
-    <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled ? 'bg-white/90 backdrop-blur-md shadow-sm py-3' : 'bg-transparent py-5'}`}>
+    <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled || !isHome ? 'bg-white/90 backdrop-blur-md shadow-sm py-3' : 'bg-transparent py-5'}`}>
       <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
-        <div className="flex items-center gap-2">
+        <Link to="/" className="flex items-center gap-2">
           <div className="w-10 h-10 bg-nuren-pink rounded-lg flex items-center justify-center text-white font-bold text-xl">N</div>
-          <span className={`text-2xl font-bold tracking-tight ${isScrolled ? 'text-slate-900' : 'text-slate-900'}`}>NUREN GROUP</span>
-        </div>
+          <span className="text-2xl font-bold tracking-tight text-slate-900">NUREN GROUP</span>
+        </Link>
 
         {/* Desktop Nav */}
         <div className="hidden md:flex items-center gap-8">
           {navLinks.map((link) => (
-            <a 
-              key={link.name} 
-              href={link.href} 
-              className="text-sm font-medium text-slate-600 hover:text-nuren-pink transition-colors"
-            >
-              {link.name}
-            </a>
+            link.href.startsWith('/#') ? (
+              <a 
+                key={link.name} 
+                href={link.href} 
+                className="text-sm font-medium text-slate-600 hover:text-nuren-pink transition-colors"
+              >
+                {link.name}
+              </a>
+            ) : (
+              <Link 
+                key={link.name} 
+                to={link.href} 
+                className={`text-sm font-medium transition-colors ${location.pathname === link.href ? 'text-nuren-pink' : 'text-slate-600 hover:text-nuren-pink'}`}
+              >
+                {link.name}
+              </Link>
+            )
           ))}
           <button className="bg-nuren-pink text-white px-5 py-2 rounded-full text-sm font-semibold hover:bg-nuren-pink/90 transition-all shadow-lg shadow-nuren-pink/20">
             Partner with Us
@@ -140,16 +157,27 @@ const Navbar = () => {
           >
             <div className="flex flex-col gap-4">
               {navLinks.map((link) => (
-                <a 
-                  key={link.name} 
-                  href={link.href} 
-                  className="text-lg font-medium text-slate-700"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  {link.name}
-                </a>
+                link.href.startsWith('/#') ? (
+                  <a 
+                    key={link.name} 
+                    href={link.href} 
+                    className="text-lg font-medium text-slate-700"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    {link.name}
+                  </a>
+                ) : (
+                  <Link 
+                    key={link.name} 
+                    to={link.href} 
+                    className={`text-lg font-medium ${location.pathname === link.href ? 'text-nuren-pink' : 'text-slate-700'}`}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    {link.name}
+                  </Link>
+                )
               ))}
-              <button className="w-full bg-nuren-pink text-white py-3 rounded-xl font-semibold mt-2">
+              <button className="w-full bg-nuren-pink text-white py-4 rounded-xl font-bold mt-4">
                 Partner with Us
               </button>
             </div>
@@ -204,7 +232,7 @@ const Hero = () => {
           >
             <div className="relative z-10 rounded-3xl overflow-hidden shadow-2xl border-8 border-white">
               <img 
-                src="nuren21.jpg" 
+                src="/nuren21.jpg" 
                 alt="Nuren Group" 
                 className="w-full h-auto"
                 referrerPolicy="no-referrer"
@@ -286,89 +314,89 @@ const Products = () => {
     { 
       name: 'Motherhood.com.my', 
       desc: "Malaysia's #1 parenting marketplace and community, offering brands direct access to a high-intent audience of millions of parents.",
-      image: 'motherhood.jpg',
+      image: '/motherhood.jpg',
       platformLink: 'https://motherhood.com.my',
     },
     { 
       name: 'Kelabmama', 
       desc: 'A premium content ecosystem where brands can integrate into trusted narratives, reaching a loyal community of engaged mothers.',
-      image: 'Kelabmama.png',
+      image: '/Kelabmama.png',
       platformLink: 'https://kelabmama.com',
     },
     { 
       name: 'Ibuencer.com', 
       desc: "The region's largest mom-influencer network, driving authentic brand advocacy and high-impact social commerce through 10,000+ creators.",
-      image: 'ibuencer.png',
+      image: '/ibuencer.png',
       platformLink: 'https://www.ibuencer.com/',
       videoLink: 'https://youtu.be/5JZt0qRkPsQ?si=9qvCEB4hZ2Hv4vOQ'
     },
     { 
       name: 'Parentcraft', 
       desc: 'A specialized educational platform for brands to establish thought leadership and provide value-added skills to new and expecting parents.',
-      image: 'parentcraft.png',
+      image: '/parentcraft.png',
       platformLink: 'https://www.motherhood.com.my/parentcraft',
       videoLink: 'https://youtu.be/RZ8iwTcbrwA?si=hqO_--EemJxj7r26'
     },
     { 
       name: 'Ask Me Doctor', 
       desc: 'A high-trust medical advice platform where healthcare and wellness brands can connect with families through expert-led content.',
-      image: 'askmeDoctor.jpg',
+      image: '/askmeDoctor.jpg',
       platformLink: 'https://home.motherhood.com.my/',
       videoLink: 'https://youtu.be/PquKkf4wM14?si=1uFO1G2aR2T9e_1F'
     },
     { 
       name: 'Motherhood Choice Award', 
       desc: "The gold standard of parenting excellence, providing brands with the ultimate seal of approval from Malaysia's largest voting community.",
-      image: 'motherhoodchoiceawards.jpg',
+      image: '/motherhoodchoiceawards.jpg',
       platformLink: 'https://www.motherhood.com.my/motherhood-award-2025',
       videoLink: 'https://youtu.be/4mkAcSU5GF4?si=HfcHyfn-RFzFKQKQ'
     },
     { 
       name: 'Nuren.asia', 
       desc: 'A dynamic lifestyle platform for Gen Z and young women, offering brands a gateway to the next generation of female consumers.',
-      image: 'nuren21.jpg',
+      image: '/nuren21.jpg',
       platformLink: 'https://nuren.asia/',
     },
     { 
       name: 'Motherhood SuperApp', 
       desc: 'A data-driven mobile companion that keeps your brand at the fingertips of modern parents throughout their daily parenting journey.',
-      image: 'MotherhoodSuperapp.png',
+      image: '/MotherhoodSuperapp.png',
       platformLink: 'https://m.motherhood.com.my/',
     },
     { 
       name: 'Superkids', 
       desc: "An interactive development hub where children's brands can engage families through creative content and educational activities.",
-      image: 'superkids.png',
+      image: '/superkids.png',
       platformLink: 'https://m.motherhood.com.my/superkid-infopage',
     },
     { 
       name: 'New Mom Program', 
       desc: 'A targeted loyalty ecosystem that allows brands to build long-term relationships with parents from the very start of their journey.',
-      image: 'newmom.png',
+      image: '/newmom.png',
       platformLink: 'https://www.motherhood.com.my/newmom-program',
     },
     { 
       name: 'Money Smart Mama', 
       desc: 'Empowering women with financial confidence, this program offers a unique space for financial and household brands to support family prosperity.',
-      image: 'moneysmartmama.jpg',
+      image: '/moneysmartmama.jpg',
       platformLink: 'https://www.motherhood.com.my/moneysmartmama',
     },
     { 
       name: 'MamaCubaTry', 
       desc: 'The ultimate sampling and social review engine, enabling brands to generate authentic feedback, UGC, and massive share of voice.',
-      image: 'mamacubatry.jpg',
+      image: '/mamacubatry.jpg',
       platformLink: 'https://m.motherhood.com.my/mamacubatry-product',
     },
     { 
       name: 'Creator Food Network', 
       desc: 'A specialized culinary community connecting food and kitchen brands with passionate home cooks and family-focused food creators.',
-      image: 'Creatorfoodnetwork.jpg',
+      image: '/Creatorfoodnetwork.jpg',
       platformLink: 'https://nuren.asia/',
     },
     { 
       name: 'School Outreach Program', 
       desc: 'An organized school tour program featuring curated workshops and sampling activations, creating an educational, enriching, and fun learning experience for children while offering brands direct engagement in a trusted school environment.',
-      image: 'schooloutreach.png',
+      image: '/schooloutreach.png',
       platformLink: 'https://www.motherhood.com.my/',
     }
   ];
@@ -557,7 +585,7 @@ const Newsroom = () => {
           >
             <div className="relative aspect-video">
               <img 
-                src="nuren21.jpg" 
+                src="/nuren21.jpg" 
                 alt="News Video Thumbnail" 
                 className="w-full h-full object-cover"
                 referrerPolicy="no-referrer"
@@ -1032,45 +1060,316 @@ const Footer = () => {
   );
 };
 
+// --- Ecosystem Page ---
+
+const EcosystemPage = () => {
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
+  const flywheelSteps = [
+    {
+      title: "Community First",
+      desc: "We build high-trust communities where families connect, share, and support each other.",
+      icon: <Users className="text-nuren-pink" size={32} />,
+      color: "bg-pink-50"
+    },
+    {
+      title: "Content Driven",
+      desc: "Our expert-led and user-generated content provides value at every stage of the parenting journey.",
+      icon: <BookOpen className="text-nuren-purple" size={32} />,
+      color: "bg-purple-50"
+    },
+    {
+      title: "Commerce Integrated",
+      desc: "We seamlessly integrate commerce through our marketplace and influencer-led social commerce.",
+      icon: <Store className="text-blue-500" size={32} />,
+      color: "bg-blue-50"
+    },
+    {
+      title: "Data Powered",
+      desc: "Every interaction generates insights that help us serve families better and drive brand growth.",
+      icon: <Database className="text-emerald-500" size={32} />,
+      color: "bg-emerald-50"
+    }
+  ];
+
+  const ecosystemLayers = [
+    {
+      name: "Discovery & Content",
+      platforms: ["Kelabmama", "Ask Me Doctor", "Nuren.asia"],
+      desc: "Where families find inspiration, expert advice, and relatable stories."
+    },
+    {
+      name: "Community & Advocacy",
+      platforms: ["Ibuencer.com", "Motherhood Choice Awards", "MamaCubaTry"],
+      desc: "Harnessing the power of peer-to-peer trust and authentic reviews."
+    },
+    {
+      name: "Commerce & Fulfillment",
+      platforms: ["Motherhood.com.my", "Motherhood SuperApp", "New Mom Program"],
+      desc: "The destination for all parenting needs, from pregnancy to school years."
+    }
+  ];
+
+  return (
+    <div className="pt-24 pb-20">
+      {/* Hero */}
+      <section className="py-20 bg-slate-50 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-1/2 h-full opacity-10 pointer-events-none">
+          <Network className="w-full h-full text-nuren-pink" />
+        </div>
+        <div className="max-w-7xl mx-auto px-6 relative z-10">
+          <div className="max-w-3xl">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-nuren-pink/10 text-nuren-pink text-sm font-bold mb-6"
+            >
+              <Layers size={16} />
+              EXPLORE OUR ECOSYSTEM
+            </motion.div>
+            <motion.h1 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="text-5xl md:text-7xl font-bold text-slate-900 mb-8 leading-tight"
+            >
+              A 360° Universe for <span className="text-nuren-pink">Modern Families</span>
+            </motion.h1>
+            <motion.p 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="text-xl text-slate-600 mb-10 leading-relaxed"
+            >
+              Nuren Group has built Southeast Asia's most comprehensive ecosystem for parents and women. We don't just provide platforms; we create a seamless journey of support, discovery, and growth.
+            </motion.p>
+          </div>
+        </div>
+      </section>
+
+      {/* The Flywheel */}
+      <section className="py-24">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl font-bold text-slate-900 mb-4">The Nuren Flywheel</h2>
+            <p className="text-slate-600 max-w-2xl mx-auto text-lg">
+              Our ecosystem is built on a self-reinforcing cycle that creates value for users and brands alike.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+            {flywheelSteps.map((step, idx) => (
+              <motion.div 
+                key={idx}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: idx * 0.1 }}
+                className="p-8 rounded-3xl border border-slate-100 bg-white hover:shadow-xl transition-all group"
+              >
+                <div className={`w-16 h-16 rounded-2xl ${step.color} flex items-center justify-center mb-6 group-hover:scale-110 transition-transform`}>
+                  {step.icon}
+                </div>
+                <h3 className="text-xl font-bold text-slate-900 mb-4">{step.title}</h3>
+                <p className="text-slate-600 leading-relaxed">
+                  {step.desc}
+                </p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Ecosystem Architecture */}
+      <section className="py-24 bg-slate-900 text-white rounded-[64px] mx-6">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="grid lg:grid-cols-2 gap-16 items-center">
+            <div>
+              <h2 className="text-4xl font-bold mb-8">Integrated Architecture</h2>
+              <p className="text-slate-400 text-lg mb-12 leading-relaxed">
+                Our platforms are not silos. They are interconnected layers that work together to provide a holistic experience for our users.
+              </p>
+
+              <div className="space-y-8">
+                {ecosystemLayers.map((layer, idx) => (
+                  <div key={idx} className="flex gap-6">
+                    <div className="flex-shrink-0 w-12 h-12 rounded-full bg-nuren-pink/20 border border-nuren-pink/30 flex items-center justify-center font-bold text-nuren-pink">
+                      {idx + 1}
+                    </div>
+                    <div>
+                      <h4 className="text-xl font-bold mb-2">{layer.name}</h4>
+                      <p className="text-slate-400 mb-4">{layer.desc}</p>
+                      <div className="flex flex-wrap gap-2">
+                        {layer.platforms.map(p => (
+                          <span key={p} className="px-3 py-1 bg-white/5 border border-white/10 rounded-full text-xs text-slate-300">
+                            {p}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="relative">
+              <div className="aspect-square bg-gradient-to-br from-nuren-pink/20 to-nuren-purple/20 rounded-full flex items-center justify-center p-12 border border-white/10">
+                <div className="w-full h-full bg-white/5 backdrop-blur-3xl rounded-full border border-white/10 flex items-center justify-center relative">
+                  <div className="w-32 h-32 bg-nuren-pink rounded-full flex items-center justify-center text-4xl font-bold shadow-2xl shadow-nuren-pink/50">N</div>
+                  
+                  {/* Floating Icons */}
+                  <motion.div 
+                    animate={{ y: [0, -10, 0] }}
+                    transition={{ duration: 4, repeat: Infinity }}
+                    className="absolute top-10 left-10 w-16 h-16 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/20"
+                  >
+                    <Users className="text-nuren-pink" />
+                  </motion.div>
+                  <motion.div 
+                    animate={{ y: [0, 10, 0] }}
+                    transition={{ duration: 5, repeat: Infinity }}
+                    className="absolute bottom-10 right-10 w-16 h-16 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/20"
+                  >
+                    <Store className="text-blue-400" />
+                  </motion.div>
+                  <motion.div 
+                    animate={{ x: [0, 10, 0] }}
+                    transition={{ duration: 6, repeat: Infinity }}
+                    className="absolute top-1/2 -right-8 w-16 h-16 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/20"
+                  >
+                    <Share2 className="text-emerald-400" />
+                  </motion.div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Data Insights */}
+      <section className="py-24">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="bg-nuren-pink/5 rounded-[48px] p-12 md:p-20 overflow-hidden relative">
+            <div className="absolute -bottom-20 -right-20 w-80 h-80 bg-nuren-pink/10 rounded-full blur-3xl"></div>
+            <div className="grid lg:grid-cols-2 gap-16 items-center relative z-10">
+              <div>
+                <h2 className="text-4xl font-bold text-slate-900 mb-6">Unified Data Insights</h2>
+                <p className="text-xl text-slate-600 mb-8 leading-relaxed">
+                  Our ecosystem captures data across the entire lifecycle of a family. From the first pregnancy test to the first day of school, we understand the evolving needs of parents.
+                </p>
+                <ul className="space-y-4">
+                  {[
+                    "Cross-platform user profiling",
+                    "Behavioral intent mapping",
+                    "Predictive lifecycle marketing",
+                    "Real-time market sentiment analysis"
+                  ].map((item, i) => (
+                    <li key={i} className="flex items-center gap-3 text-slate-700 font-medium">
+                      <CheckCircle2 className="text-nuren-pink" size={20} />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="grid grid-cols-2 gap-6">
+                <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
+                  <div className="text-3xl font-bold text-nuren-pink mb-2">5M+</div>
+                  <div className="text-sm text-slate-500 uppercase tracking-wider font-bold">Monthly Active Users</div>
+                </div>
+                <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
+                  <div className="text-3xl font-bold text-nuren-purple mb-2">10K+</div>
+                  <div className="text-sm text-slate-500 uppercase tracking-wider font-bold">Influencers</div>
+                </div>
+                <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
+                  <div className="text-3xl font-bold text-blue-500 mb-2">100M+</div>
+                  <div className="text-sm text-slate-500 uppercase tracking-wider font-bold">Data Points</div>
+                </div>
+                <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
+                  <div className="text-3xl font-bold text-emerald-500 mb-2">5K+</div>
+                  <div className="text-sm text-slate-500 uppercase tracking-wider font-bold">Brand Partners</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* CTA */}
+      <section className="py-24 text-center">
+        <div className="max-w-3xl mx-auto px-6">
+          <h2 className="text-4xl font-bold text-slate-900 mb-6">Be Part of the Ecosystem</h2>
+          <p className="text-xl text-slate-600 mb-10">
+            Whether you're a parent looking for support or a brand looking for growth, there's a place for you in our universe.
+          </p>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <button className="w-full sm:w-auto bg-nuren-pink text-white px-10 py-4 rounded-full font-bold text-lg shadow-xl shadow-nuren-pink/20 hover:scale-105 transition-transform">
+              Partner with Us
+            </button>
+            <Link to="/" className="w-full sm:w-auto bg-slate-100 text-slate-700 px-10 py-4 rounded-full font-bold text-lg hover:bg-slate-200 transition-all">
+              Back to Home
+            </Link>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+};
+
+// --- Home Component ---
+
+const Home = () => {
+  return (
+    <>
+      <Hero />
+      <Stats />
+      <QuickLinks />
+      <Products />
+      <BrandSolutions />
+      <CaseStudies />
+      <Newsroom />
+      <Investors />
+      <BoardOfDirectors />
+      <VisionSection />
+      
+      {/* Call to Action Section */}
+      <section className="py-24 text-center">
+        <div className="max-w-3xl mx-auto px-6">
+          <h2 className="text-4xl font-bold text-slate-900 mb-6">Ready to Grow with Us?</h2>
+          <p className="text-xl text-slate-600 mb-10">
+            Join 5,000+ brands and connect with millions of families across Southeast Asia.
+          </p>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <button className="w-full sm:w-auto bg-nuren-pink text-white px-10 py-4 rounded-full font-bold text-lg shadow-xl shadow-nuren-pink/20 hover:scale-105 transition-transform">
+              Contact Sales
+            </button>
+            <Link to="/ecosystem" className="w-full sm:w-auto bg-slate-100 text-slate-700 px-10 py-4 rounded-full font-bold text-lg hover:bg-slate-200 transition-all">
+              Explore Ecosystem
+            </Link>
+          </div>
+        </div>
+      </section>
+    </>
+  );
+};
+
 // --- Main App ---
 
 export default function App() {
   return (
-    <div className="min-h-screen bg-white">
-      <Navbar />
-      
-      <main>
-        <Hero />
-        <Stats />
-        <QuickLinks />
-        <Products />
-        <BrandSolutions />
-        <CaseStudies />
-        <Newsroom />
-        <Investors />
-        <BoardOfDirectors />
-        <VisionSection />
+    <BrowserRouter>
+      <div className="min-h-screen bg-white">
+        <Navbar />
         
-        {/* Call to Action Section */}
-        <section className="py-24 text-center">
-          <div className="max-w-3xl mx-auto px-6">
-            <h2 className="text-4xl font-bold text-slate-900 mb-6">Ready to Grow with Us?</h2>
-            <p className="text-xl text-slate-600 mb-10">
-              Join 5,000+ brands and connect with millions of families across Southeast Asia.
-            </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <button className="w-full sm:w-auto bg-nuren-pink text-white px-10 py-4 rounded-full font-bold text-lg shadow-xl shadow-nuren-pink/20 hover:scale-105 transition-transform">
-                Contact Sales
-              </button>
-              <button className="w-full sm:w-auto bg-slate-100 text-slate-700 px-10 py-4 rounded-full font-bold text-lg hover:bg-slate-200 transition-all">
-                Learn More
-              </button>
-            </div>
-          </div>
-        </section>
-      </main>
+        <main>
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/ecosystem" element={<EcosystemPage />} />
+          </Routes>
+        </main>
 
-      <Footer />
-    </div>
+        <Footer />
+      </div>
+    </BrowserRouter>
   );
 }
