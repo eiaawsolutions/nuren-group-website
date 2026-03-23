@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, FormEvent } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
 import { 
@@ -84,7 +84,156 @@ const VideoModal = ({ isOpen, onClose, videoUrl }: { isOpen: boolean, onClose: (
   );
 };
 
-const Navbar = () => {
+const ContactModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) => {
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    message: '',
+    services: [] as string[]
+  });
+  const [errors, setErrors] = useState({
+    name: false,
+    email: false,
+    message: false
+  });
+
+  const servicesList = [
+    'Parenting Platform Advertising',
+    'Ibuencer Influencer Marketing',
+    'Motherhood Marketplace',
+    'Data Insights & Analytics',
+    'Offline Events & Sampling',
+    'Others'
+  ];
+
+  const handleCheckboxChange = (service: string) => {
+    setFormData(prev => ({
+      ...prev,
+      services: prev.services.includes(service)
+        ? prev.services.filter(s => s !== service)
+        : [...prev.services, service]
+    }));
+  };
+
+  const handleSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    
+    const newErrors = {
+      name: !formData.name.trim(),
+      email: !formData.email.trim(),
+      message: !formData.message.trim()
+    };
+    
+    setErrors(newErrors);
+
+    if (newErrors.name || newErrors.email || newErrors.message) {
+      return;
+    }
+
+    const servicesText = formData.services.length > 0 ? formData.services.join(', ') : 'None selected';
+    const whatsappMessage = `NEW INQUIRY\nName: ${formData.name}\nEmail: ${formData.email}\nServices: ${servicesText}\nMessage: ${formData.message}`;
+    const encodedMessage = encodeURIComponent(whatsappMessage);
+    const whatsappUrl = `https://wa.me/60124238768?text=${encodedMessage}`;
+    
+    window.open(whatsappUrl, '_blank');
+    onClose();
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <AnimatePresence>
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+        onClick={onClose}
+      >
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.9, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.9, y: 20 }}
+          className="relative w-full max-w-lg bg-white rounded-3xl overflow-hidden shadow-2xl"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="p-8">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-slate-900">Contact Us</h2>
+              <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition-colors">
+                <X size={24} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Name *</label>
+                <input 
+                  type="text" 
+                  value={formData.name}
+                  onChange={(e) => setFormData({...formData, name: e.target.value})}
+                  className={`w-full px-4 py-3 rounded-xl border ${errors.name ? 'border-red-500' : 'border-slate-200'} focus:ring-2 focus:ring-nuren-pink focus:border-transparent outline-none transition-all`}
+                  placeholder="Your full name"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Email *</label>
+                <input 
+                  type="email" 
+                  value={formData.email}
+                  onChange={(e) => setFormData({...formData, email: e.target.value})}
+                  className={`w-full px-4 py-3 rounded-xl border ${errors.email ? 'border-red-500' : 'border-slate-200'} focus:ring-2 focus:ring-nuren-pink focus:border-transparent outline-none transition-all`}
+                  placeholder="your@email.com"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">Services Needed</label>
+                <div className="grid grid-cols-1 gap-2">
+                  {servicesList.map(service => (
+                    <label key={service} className="flex items-center gap-3 cursor-pointer group">
+                      <div className="relative flex items-center">
+                        <input 
+                          type="checkbox" 
+                          checked={formData.services.includes(service)}
+                          onChange={() => handleCheckboxChange(service)}
+                          className="peer h-5 w-5 cursor-pointer appearance-none rounded border border-slate-300 checked:border-nuren-pink checked:bg-nuren-pink transition-all"
+                        />
+                        <CheckCircle2 size={14} className="absolute left-0.5 text-white opacity-0 peer-checked:opacity-100 transition-opacity" />
+                      </div>
+                      <span className="text-sm text-slate-600 group-hover:text-slate-900 transition-colors">{service}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Message *</label>
+                <textarea 
+                  value={formData.message}
+                  onChange={(e) => setFormData({...formData, message: e.target.value})}
+                  className={`w-full px-4 py-3 rounded-xl border ${errors.message ? 'border-red-500' : 'border-slate-200'} focus:ring-2 focus:ring-nuren-pink focus:border-transparent outline-none transition-all h-32 resize-none`}
+                  placeholder="Tell us about your requirements..."
+                />
+              </div>
+
+              <button 
+                type="submit"
+                className="w-full bg-nuren-pink text-white py-4 rounded-xl font-bold text-lg shadow-lg shadow-nuren-pink/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+              >
+                Submit via WhatsApp
+                <Zap size={20} fill="currentColor" />
+              </button>
+            </form>
+          </div>
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
+  );
+};
+
+const Navbar = ({ onContactClick }: { onContactClick: () => void }) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
@@ -135,7 +284,10 @@ const Navbar = () => {
               </Link>
             )
           ))}
-          <button className="bg-nuren-pink text-white px-5 py-2 rounded-full text-sm font-semibold hover:bg-nuren-pink/90 transition-all shadow-lg shadow-nuren-pink/20">
+          <button 
+            onClick={onContactClick}
+            className="bg-nuren-pink text-white px-5 py-2 rounded-full text-sm font-semibold hover:bg-nuren-pink/90 transition-all shadow-lg shadow-nuren-pink/20"
+          >
             Partner with Us
           </button>
         </div>
@@ -177,7 +329,13 @@ const Navbar = () => {
                   </Link>
                 )
               ))}
-              <button className="w-full bg-nuren-pink text-white py-4 rounded-xl font-bold mt-4">
+              <button 
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  onContactClick();
+                }}
+                className="w-full bg-nuren-pink text-white py-4 rounded-xl font-bold mt-4"
+              >
                 Partner with Us
               </button>
             </div>
@@ -483,14 +641,14 @@ const CaseStudies = () => {
     {
       title: "Scott's reached 2 million mums via Ibuencer from Rainbow Gummies virtual launch",
       desc: "How Scott's leveraged the Ibuencer network to achieve massive reach and engagement for their new product launch.",
-      image: "https://images.unsplash.com/photo-1491438590914-bc09fcaaf77a?auto=format&fit=crop&w=800&q=80",
+      image: "/Success-scotts.png",
       link: "https://marketingmagazine.com.my/scotts-reached-2-million-mums-via-ibuencer-from-rainbow-gummies-virtual-launch/",
       tags: ["FMCG", "Influencer Marketing", "Launch"]
     },
     {
       title: "Motherhood Choice Awards: Driving Brand Trust & Sales",
       desc: "A look at how the annual awards program helps brands build long-term credibility with Southeast Asian mothers.",
-      image: "https://images.unsplash.com/photo-1531058020387-3be344556be6?auto=format&fit=crop&w=800&q=80",
+      image: "/Success-motherhoodchoiceaward.png",
       link: "https://www.motherhood.com.my/motherhood-award-2025",
       tags: ["Awards", "Community", "Trust"]
     }
@@ -775,7 +933,7 @@ const QuickLinks = () => {
   );
 };
 
-const BrandSolutions = () => {
+const BrandSolutions = ({ onContactClick }: { onContactClick: () => void }) => {
   const solutions = [
     { 
       title: 'Community-led Campaigns', 
@@ -838,7 +996,10 @@ const BrandSolutions = () => {
                 <p className="text-slate-300">Measurable growth and ROI</p>
               </div>
             </div>
-            <button className="mt-10 bg-white text-slate-900 px-8 py-4 rounded-full font-bold hover:bg-slate-100 transition-all flex items-center gap-2">
+            <button 
+              onClick={onContactClick}
+              className="mt-10 bg-white text-slate-900 px-8 py-4 rounded-full font-bold hover:bg-slate-100 transition-all flex items-center gap-2"
+            >
               Get Started
               <ArrowRight size={20} />
             </button>
@@ -1062,7 +1223,7 @@ const Footer = () => {
 
 // --- Ecosystem Page ---
 
-const EcosystemPage = () => {
+const EcosystemPage = ({ onContactClick }: { onContactClick: () => void }) => {
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
@@ -1303,7 +1464,10 @@ const EcosystemPage = () => {
             Whether you're a parent looking for support or a brand looking for growth, there's a place for you in our universe.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <button className="w-full sm:w-auto bg-nuren-pink text-white px-10 py-4 rounded-full font-bold text-lg shadow-xl shadow-nuren-pink/20 hover:scale-105 transition-transform">
+            <button 
+              onClick={onContactClick}
+              className="w-full sm:w-auto bg-nuren-pink text-white px-10 py-4 rounded-full font-bold text-lg shadow-xl shadow-nuren-pink/20 hover:scale-105 transition-transform"
+            >
               Partner with Us
             </button>
             <Link to="/" className="w-full sm:w-auto bg-slate-100 text-slate-700 px-10 py-4 rounded-full font-bold text-lg hover:bg-slate-200 transition-all">
@@ -1318,14 +1482,14 @@ const EcosystemPage = () => {
 
 // --- Home Component ---
 
-const Home = () => {
+const Home = ({ onContactClick }: { onContactClick: () => void }) => {
   return (
     <>
       <Hero />
       <Stats />
       <QuickLinks />
       <Products />
-      <BrandSolutions />
+      <BrandSolutions onContactClick={onContactClick} />
       <CaseStudies />
       <Newsroom />
       <Investors />
@@ -1340,7 +1504,10 @@ const Home = () => {
             Join 5,000+ brands and connect with millions of families across Southeast Asia.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <button className="w-full sm:w-auto bg-nuren-pink text-white px-10 py-4 rounded-full font-bold text-lg shadow-xl shadow-nuren-pink/20 hover:scale-105 transition-transform">
+            <button 
+              onClick={onContactClick}
+              className="w-full sm:w-auto bg-nuren-pink text-white px-10 py-4 rounded-full font-bold text-lg shadow-xl shadow-nuren-pink/20 hover:scale-105 transition-transform"
+            >
               Contact Sales
             </button>
             <Link to="/ecosystem" className="w-full sm:w-auto bg-slate-100 text-slate-700 px-10 py-4 rounded-full font-bold text-lg hover:bg-slate-200 transition-all">
@@ -1356,19 +1523,26 @@ const Home = () => {
 // --- Main App ---
 
 export default function App() {
+  const [isContactModalOpen, setIsContactModalOpen] = useState(false);
+
   return (
     <BrowserRouter>
       <div className="min-h-screen bg-white">
-        <Navbar />
+        <Navbar onContactClick={() => setIsContactModalOpen(true)} />
         
         <main>
           <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/ecosystem" element={<EcosystemPage />} />
+            <Route path="/" element={<Home onContactClick={() => setIsContactModalOpen(true)} />} />
+            <Route path="/ecosystem" element={<EcosystemPage onContactClick={() => setIsContactModalOpen(true)} />} />
           </Routes>
         </main>
 
         <Footer />
+
+        <ContactModal 
+          isOpen={isContactModalOpen} 
+          onClose={() => setIsContactModalOpen(false)} 
+        />
       </div>
     </BrowserRouter>
   );
