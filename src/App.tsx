@@ -364,6 +364,12 @@ const Products = () => {
       desc: 'A specialized culinary community connecting food and kitchen brands with passionate home cooks and family-focused food creators.',
       image: '/Creatorfoodnetwork.jpg',
       platformLink: 'https://nuren.asia/',
+    },
+    { 
+      name: 'School Outreach Program', 
+      desc: 'An organized school tour program featuring curated workshops and sampling activations, creating an educational, enriching, and fun learning experience for children while offering brands direct engagement in a trusted school environment.',
+      image: '/schooloutreach.png',
+      platformLink: 'https://www.motherhood.com.my/',
     }
   ];
 
