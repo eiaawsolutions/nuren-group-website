@@ -204,8 +204,8 @@ const Hero = () => {
           >
             <div className="relative z-10 rounded-3xl overflow-hidden shadow-2xl border-8 border-white">
               <img 
-                src="https://images.unsplash.com/photo-1592610303798-242168819445?auto=format&fit=crop&w=800&q=80" 
-                alt="Happy Family" 
+                src="/nuren21.jpg" 
+                alt="Nuren Group" 
                 className="w-full h-auto"
                 referrerPolicy="no-referrer"
               />
@@ -326,7 +326,7 @@ const Products = () => {
     { 
       name: 'Nuren.asia', 
       desc: 'A dynamic lifestyle platform for Gen Z and young women, offering brands a gateway to the next generation of female consumers.',
-      image: 'https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=800&q=80',
+      image: '/nuren21.jpg',
       platformLink: 'https://nuren.asia/',
     },
     { 
@@ -557,7 +557,7 @@ const Newsroom = () => {
           >
             <div className="relative aspect-video">
               <img 
-                src="https://picsum.photos/seed/news-video/800/450" 
+                src="/nuren21.jpg" 
                 alt="News Video Thumbnail" 
                 className="w-full h-full object-cover"
               />
