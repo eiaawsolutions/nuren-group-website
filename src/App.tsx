@@ -347,6 +347,11 @@ const Navbar = ({ onContactClick }: { onContactClick: () => void }) => {
 };
 
 const Hero = () => {
+  const [activeVideo, setActiveVideo] = useState<string | null>(null);
+  const videoId = "r0SxrRvigO0";
+  const videoUrl = `https://youtu.be/${videoId}?si=WEozAR5uvEhxS1u_`;
+  const thumbnailUrl = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
+
   return (
     <section className="relative pt-32 pb-20 overflow-hidden">
       {/* Background Accents */}
@@ -376,8 +381,12 @@ const Hero = () => {
                 Explore Our Ecosystem
                 <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform" />
               </button>
-              <button className="border-2 border-slate-200 text-slate-700 px-8 py-4 rounded-full font-bold hover:bg-slate-50 transition-all">
-                Case Studies
+              <button 
+                onClick={() => setActiveVideo(videoUrl)}
+                className="border-2 border-slate-200 text-slate-700 px-8 py-4 rounded-full font-bold hover:bg-slate-50 transition-all flex items-center gap-2"
+              >
+                Watch Video
+                <Play size={20} fill="currentColor" />
               </button>
             </div>
           </motion.div>
@@ -388,13 +397,28 @@ const Hero = () => {
             transition={{ duration: 0.8, delay: 0.2 }}
             className="relative"
           >
-            <div className="relative z-10 rounded-3xl overflow-hidden shadow-2xl border-8 border-white">
+            <div 
+              className="relative z-10 rounded-3xl overflow-hidden shadow-2xl border-8 border-white group cursor-pointer aspect-video"
+              onClick={() => setActiveVideo(videoUrl)}
+            >
               <img 
-                src="/nuren21.jpg" 
-                alt="Nuren Group" 
-                className="w-full h-auto"
+                src={thumbnailUrl} 
+                alt="Nuren Group Featured Video" 
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                 referrerPolicy="no-referrer"
               />
+              <div className="absolute inset-0 bg-black/30 group-hover:bg-black/50 transition-colors flex items-center justify-center">
+                <div className="relative">
+                  <div className="absolute -inset-4 bg-nuren-pink/30 rounded-full blur-xl animate-pulse group-hover:bg-nuren-pink/50 transition-colors" />
+                  <div className="relative w-20 h-20 bg-white text-nuren-pink rounded-full flex items-center justify-center shadow-2xl transform group-hover:scale-110 transition-transform duration-300">
+                    <Play size={32} fill="currentColor" className="ml-1" />
+                  </div>
+                </div>
+              </div>
+              <div className="absolute bottom-6 left-6 right-6 flex items-center justify-between text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                <span className="text-sm font-bold tracking-wide uppercase">Nuren Group Ecosystem</span>
+                <span className="text-xs bg-black/40 px-2 py-1 rounded backdrop-blur-sm">0:45</span>
+              </div>
             </div>
             {/* Floating Cards */}
             <motion.div 
@@ -427,6 +451,12 @@ const Hero = () => {
           </motion.div>
         </div>
       </div>
+
+      <VideoModal 
+        isOpen={!!activeVideo} 
+        onClose={() => setActiveVideo(null)} 
+        videoUrl={activeVideo || ''} 
+      />
     </section>
   );
 };
