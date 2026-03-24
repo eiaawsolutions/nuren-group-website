@@ -1,6 +1,7 @@
 import { useState, useEffect, FormEvent } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
+import { Helmet, HelmetProvider } from 'react-helmet-async';
 import { 
   Users, 
   Store, 
@@ -259,8 +260,7 @@ const Navbar = ({ onContactClick }: { onContactClick: () => void }) => {
     <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled || !isHome ? 'bg-white/90 backdrop-blur-md shadow-sm py-3' : 'bg-transparent py-5'}`}>
       <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2">
-          <div className="w-10 h-10 bg-nuren-pink rounded-lg flex items-center justify-center text-white font-bold text-xl">N</div>
-          <span className="text-2xl font-bold tracking-tight text-slate-900">NUREN GROUP</span>
+          <img src="/NurenGroup.jpg" alt="Nuren Group Logo" className="h-10 w-auto object-contain" referrerPolicy="no-referrer" />
         </Link>
 
         {/* Desktop Nav */}
@@ -377,10 +377,10 @@ const Hero = () => {
               Nuren Group is a community-driven digital ecosystem connecting brands with highly engaged audiences through trusted platforms, data, and technology.
             </p>
             <div className="flex flex-wrap gap-4">
-              <button className="bg-slate-900 text-white px-8 py-4 rounded-full font-bold flex items-center gap-2 hover:bg-slate-800 transition-all group">
+              <Link to="/ecosystem" className="bg-slate-900 text-white px-8 py-4 rounded-full font-bold flex items-center gap-2 hover:bg-slate-800 transition-all group">
                 Explore Our Ecosystem
                 <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform" />
-              </button>
+              </Link>
               <button 
                 onClick={() => setActiveVideo(videoUrl)}
                 className="border-2 border-slate-200 text-slate-700 px-8 py-4 rounded-full font-bold hover:bg-slate-50 transition-all flex items-center gap-2"
@@ -503,7 +503,7 @@ const Products = () => {
       name: 'Motherhood.com.my', 
       desc: "Malaysia's #1 parenting marketplace and community, offering brands direct access to a high-intent audience of millions of parents.",
       image: '/motherhood.jpg',
-      platformLink: 'https://motherhood.com.my',
+      platformLink: 'https://home.motherhood.com.my/',
     },
     { 
       name: 'Kelabmama', 
@@ -522,8 +522,8 @@ const Products = () => {
       name: 'Parentcraft', 
       desc: 'A specialized educational platform for brands to establish thought leadership and provide value-added skills to new and expecting parents.',
       image: '/parentcraft.png',
-      platformLink: 'https://www.motherhood.com.my/parentcraft',
-      videoLink: 'https://youtu.be/RZ8iwTcbrwA?si=hqO_--EemJxj7r26'
+      platformLink: 'https://www.motherhood.com.my/event/parentcraft-class',
+      videoLink: 'https://youtu.be/bJjLpYrekNs'
     },
     { 
       name: 'Ask Me Doctor', 
@@ -537,7 +537,7 @@ const Products = () => {
       desc: "The gold standard of parenting excellence, providing brands with the ultimate seal of approval from Malaysia's largest voting community.",
       image: '/motherhoodchoiceawards.jpg',
       platformLink: 'https://www.motherhood.com.my/motherhood-award-2025',
-      videoLink: 'https://youtu.be/4mkAcSU5GF4?si=HfcHyfn-RFzFKQKQ'
+      videoLink: 'https://youtu.be/4mkAcSU5GF4?si=H1N_85b9lL77eXla'
     },
     { 
       name: 'Nuren.asia', 
@@ -550,6 +550,13 @@ const Products = () => {
       desc: 'A data-driven mobile companion that keeps your brand at the fingertips of modern parents throughout their daily parenting journey.',
       image: '/MotherhoodSuperapp.png',
       platformLink: 'https://m.motherhood.com.my/',
+    },
+    { 
+      name: 'Motherhood AI (MAI)', 
+      desc: 'An intelligent AI-powered parenting companion providing personalized guidance, health tracking, and instant expert support for modern families.',
+      image: '/MAI.png',
+      platformLink: 'https://m.motherhood.com.my/',
+      videoLink: 'https://youtu.be/i0p--rmPeAM?si=ykThmaNNb2zga4h0'
     },
     { 
       name: 'Superkids', 
@@ -567,7 +574,7 @@ const Products = () => {
       name: 'Money Smart Mama', 
       desc: 'Empowering women with financial confidence, this program offers a unique space for financial and household brands to support family prosperity.',
       image: '/moneysmartmama.jpg',
-      platformLink: 'https://www.motherhood.com.my/moneysmartmama',
+      videoLink: 'https://youtu.be/-BTyNleKKyQ?si=sF491bwXBVOI0Ye0'
     },
     { 
       name: 'MamaCubaTry', 
@@ -579,7 +586,7 @@ const Products = () => {
       name: 'Creator Food Network', 
       desc: 'A specialized culinary community connecting food and kitchen brands with passionate home cooks and family-focused food creators.',
       image: '/Creatorfoodnetwork.jpg',
-      platformLink: 'https://nuren.asia/',
+      platformLink: 'https://www.tiktok.com/@creatorfoodnetwork',
     },
     { 
       name: 'School Outreach Program', 
@@ -742,6 +749,8 @@ const CaseStudies = () => {
 };
 
 const Newsroom = () => {
+  const [activeVideo, setActiveVideo] = useState<string | null>(null);
+
   return (
     <section id="newsroom" className="py-24 bg-slate-50">
       <div className="max-w-7xl mx-auto px-6">
@@ -771,23 +780,15 @@ const Newsroom = () => {
             viewport={{ once: true }}
             className="bg-white rounded-[32px] overflow-hidden shadow-sm border border-slate-100 group"
           >
-            <div className="relative aspect-video">
-              <img 
-                src="/nuren21.jpg" 
-                alt="News Video Thumbnail" 
-                className="w-full h-full object-cover"
-                referrerPolicy="no-referrer"
-              />
-              <a 
-                href="https://youtu.be/5uLP2ZA0Wuw?si=F7O7xBoksNlCNaE0" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/40 transition-all"
+            <div className="relative aspect-video bg-slate-900">
+              <button 
+                onClick={() => setActiveVideo("https://youtu.be/5uLP2ZA0Wuw?si=F7O7xBoksNlCNaE0")}
+                className="absolute inset-0 flex items-center justify-center bg-black/40 group-hover:bg-black/60 transition-all w-full h-full"
               >
-                <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center text-red-600 shadow-xl transform group-hover:scale-110 transition-transform">
-                  <Play size={32} fill="currentColor" />
+                <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center text-red-600 shadow-2xl transform group-hover:scale-110 transition-transform">
+                  <Play size={40} fill="currentColor" />
                 </div>
-              </a>
+              </button>
             </div>
             <div className="p-8">
               <div className="flex items-center gap-2 text-nuren-pink text-xs font-bold uppercase tracking-wider mb-3">
@@ -869,6 +870,11 @@ const Newsroom = () => {
           </div>
         </div>
       </div>
+      <VideoModal 
+        isOpen={!!activeVideo} 
+        onClose={() => setActiveVideo(null)} 
+        videoUrl={activeVideo || ''} 
+      />
     </section>
   );
 };
@@ -1202,8 +1208,7 @@ const Footer = () => {
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-12 mb-16">
           <div className="col-span-1 md:col-span-2">
             <div className="flex items-center gap-2 mb-6">
-              <div className="w-10 h-10 bg-nuren-pink rounded-lg flex items-center justify-center text-white font-bold text-xl">N</div>
-              <span className="text-2xl font-bold tracking-tight text-slate-900">NUREN GROUP</span>
+              <img src="/NurenGroup.jpg" alt="Nuren Group Logo" className="h-10 w-auto object-contain" referrerPolicy="no-referrer" />
             </div>
             <p className="text-slate-500 max-w-md mb-8 leading-relaxed">
               Leading community-driven digital ecosystem focused on empowering women, mothers, and families across Southeast Asia.
@@ -1305,6 +1310,21 @@ const EcosystemPage = ({ onContactClick }: { onContactClick: () => void }) => {
 
   return (
     <div className="pt-24 pb-20">
+      <Helmet>
+        <title>Nuren Group Ecosystem - Empowering Families through Digital Innovation</title>
+        <meta name="description" content="Discover Nuren Group's comprehensive ecosystem of digital products, from Motherhood SuperApp to Ibuencer, supporting families and empowering women across SE Asia." />
+        <meta name="keywords" content="Nuren Group ecosystem, parenting platforms, Motherhood SuperApp, Ibuencer network, Kelabmama, digital family support SE Asia" />
+        <link rel="canonical" href="https://nurengroup.com/ecosystem" />
+        <meta property="og:title" content="Nuren Group Ecosystem - Empowering Families through Digital Innovation" />
+        <meta property="og:description" content="Discover Nuren Group's comprehensive ecosystem of digital products, from Motherhood SuperApp to Ibuencer, supporting families and empowering women across SE Asia." />
+        <meta property="og:image" content="https://nurengroup.com/NurenGroup.jpg" />
+        <meta property="og:url" content="https://nurengroup.com/ecosystem" />
+        <meta property="og:type" content="website" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="Nuren Group Ecosystem - Empowering Families through Digital Innovation" />
+        <meta name="twitter:description" content="Discover Nuren Group's comprehensive ecosystem of digital products, from Motherhood SuperApp to Ibuencer, supporting families and empowering women across SE Asia." />
+        <meta name="twitter:image" content="https://nurengroup.com/NurenGroup.jpg" />
+      </Helmet>
       {/* Hero */}
       <section className="py-20 bg-slate-50 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-1/2 h-full opacity-10 pointer-events-none">
@@ -1515,6 +1535,21 @@ const EcosystemPage = ({ onContactClick }: { onContactClick: () => void }) => {
 const Home = ({ onContactClick }: { onContactClick: () => void }) => {
   return (
     <>
+      <Helmet>
+        <title>Nuren Group - Southeast Asia's Leading Community-Powered Commerce Platform</title>
+        <meta name="description" content="Nuren Group is a community-driven digital ecosystem connecting brands with highly engaged audiences through trusted platforms, data, and technology in SE Asia." />
+        <meta name="keywords" content="Nuren Group, community-powered commerce, parenting ecosystem, Southeast Asia, Motherhood SuperApp, Ibuencer, Kelabmama" />
+        <link rel="canonical" href="https://nurengroup.com/" />
+        <meta property="og:title" content="Nuren Group - Southeast Asia's Leading Community-Powered Commerce Platform" />
+        <meta property="og:description" content="Nuren Group is a community-driven digital ecosystem connecting brands with highly engaged audiences through trusted platforms, data, and technology in SE Asia." />
+        <meta property="og:image" content="https://nurengroup.com/NurenGroup.jpg" />
+        <meta property="og:url" content="https://nurengroup.com/" />
+        <meta property="og:type" content="website" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="Nuren Group - Southeast Asia's Leading Community-Powered Commerce Platform" />
+        <meta name="twitter:description" content="Nuren Group is a community-driven digital ecosystem connecting brands with highly engaged audiences through trusted platforms, data, and technology in SE Asia." />
+        <meta name="twitter:image" content="https://nurengroup.com/NurenGroup.jpg" />
+      </Helmet>
       <Hero />
       <Stats />
       <QuickLinks />
@@ -1541,7 +1576,7 @@ const Home = ({ onContactClick }: { onContactClick: () => void }) => {
               Contact Sales
             </button>
             <Link to="/ecosystem" className="w-full sm:w-auto bg-slate-100 text-slate-700 px-10 py-4 rounded-full font-bold text-lg hover:bg-slate-200 transition-all">
-              Explore Ecosystem
+              Explore our ecosystem
             </Link>
           </div>
         </div>
@@ -1556,24 +1591,26 @@ export default function App() {
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
 
   return (
-    <BrowserRouter>
-      <div className="min-h-screen bg-white">
-        <Navbar onContactClick={() => setIsContactModalOpen(true)} />
-        
-        <main>
-          <Routes>
-            <Route path="/" element={<Home onContactClick={() => setIsContactModalOpen(true)} />} />
-            <Route path="/ecosystem" element={<EcosystemPage onContactClick={() => setIsContactModalOpen(true)} />} />
-          </Routes>
-        </main>
+    <HelmetProvider>
+      <BrowserRouter>
+        <div className="min-h-screen bg-white">
+          <Navbar onContactClick={() => setIsContactModalOpen(true)} />
+          
+          <main>
+            <Routes>
+              <Route path="/" element={<Home onContactClick={() => setIsContactModalOpen(true)} />} />
+              <Route path="/ecosystem" element={<EcosystemPage onContactClick={() => setIsContactModalOpen(true)} />} />
+            </Routes>
+          </main>
 
-        <Footer />
+          <Footer />
 
-        <ContactModal 
-          isOpen={isContactModalOpen} 
-          onClose={() => setIsContactModalOpen(false)} 
-        />
-      </div>
-    </BrowserRouter>
+          <ContactModal 
+            isOpen={isContactModalOpen} 
+            onClose={() => setIsContactModalOpen(false)} 
+          />
+        </div>
+      </BrowserRouter>
+    </HelmetProvider>
   );
 }
