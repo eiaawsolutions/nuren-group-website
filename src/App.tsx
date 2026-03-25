@@ -1,7 +1,8 @@
 import { useState, useEffect, FormEvent } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Link, useLocation, useParams } from 'react-router-dom';
 import { Helmet, HelmetProvider } from 'react-helmet-async';
+import { governanceDocs } from './data/governanceDocs';
 import { 
   Users, 
   Store, 
@@ -250,8 +251,8 @@ const Navbar = ({ onContactClick }: { onContactClick: () => void }) => {
     { name: 'Ecosystem', href: '/ecosystem' },
     { name: 'Products', href: '/#products' },
     { name: 'For Brands', href: '/#brands' },
-    { name: 'Case Studies', href: '/#casestudies' },
-    { name: 'Investors', href: '/#investors' },
+    { name: 'Investors', href: '/investors' },
+    { name: 'Careers', href: '/careers' },
   ];
 
   const isHome = location.pathname === '/';
@@ -857,15 +858,13 @@ const Newsroom = () => {
               </motion.a>
             ))}
             <div className="pt-4">
-              <a 
-                href="https://nurengroup.com/mediahub" 
-                target="_blank" 
-                rel="noopener noreferrer"
+              <Link 
+                to="/media-hub" 
                 className="text-slate-900 font-bold flex items-center gap-2 hover:gap-3 transition-all"
               >
                 View All News
                 <ArrowRight size={20} />
-              </a>
+              </Link>
             </div>
           </div>
         </div>
@@ -890,7 +889,7 @@ const Investors = () => {
     { 
       title: 'Corporate Governance', 
       desc: 'Our commitment to transparency and ethical business practices.', 
-      link: 'https://nurengroup.com/investors/corporate-governance',
+      link: '/investors/corporate-governance',
       icon: <Gavel className="text-purple-600" />
     },
     { 
@@ -908,7 +907,7 @@ const Investors = () => {
     { 
       title: 'Board of Directors', 
       desc: 'Meet the experienced leaders guiding Nuren Group strategy.', 
-      link: 'https://nurengroup.com/board-of-directors',
+      link: '/board-of-directors',
       icon: <Users className="text-pink-600" />
     }
   ];
@@ -960,8 +959,8 @@ const QuickLinks = () => {
           <span className="text-white font-bold uppercase tracking-widest text-xs">Quick Links:</span>
           <a href="https://nurengroup.com/home" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Nuren Home</a>
           <a href="#products" className="hover:text-white transition-colors">Our Products</a>
-          <a href="#newsroom" className="hover:text-white transition-colors">Media Hub</a>
-          <a href="#investors" className="hover:text-white transition-colors">Investors</a>
+          <Link to="/media-hub" className="hover:text-white transition-colors">Media Hub</Link>
+          <Link to="/investors" className="hover:text-white transition-colors">Investors</Link>
           <a href="#vision" className="hover:text-white transition-colors">Our Vision</a>
         </div>
       </div>
@@ -1102,13 +1101,11 @@ const BoardOfDirectors = () => {
               </div>
             </div>
             <a 
-              href="https://nurengroup.com/board-of-directors" 
-              target="_blank" 
-              rel="noopener noreferrer"
+              href="/board-of-directors" 
               className="inline-flex items-center gap-2 bg-slate-900 text-white px-8 py-4 rounded-full font-bold hover:bg-slate-800 transition-all shadow-lg"
             >
               View Full Board
-              <ExternalLink size={20} />
+              <ArrowRight size={20} />
             </a>
           </motion.div>
           
@@ -1237,8 +1234,9 @@ const Footer = () => {
             <h4 className="font-bold text-slate-900 mb-6">Company</h4>
             <ul className="space-y-4 text-slate-500">
               <li><a href="#" className="hover:text-nuren-pink transition-colors">About Us</a></li>
-              <li><a href="#" className="hover:text-nuren-pink transition-colors">Careers</a></li>
-              <li><a href="#" className="hover:text-nuren-pink transition-colors">Press</a></li>
+              <li><Link to="/investors" className="hover:text-nuren-pink transition-colors">Investors</Link></li>
+              <li><Link to="/careers" className="hover:text-nuren-pink transition-colors">Careers</Link></li>
+              <li><Link to="/media-hub" className="hover:text-nuren-pink transition-colors">Media Hub</Link></li>
               <li><a href="#" className="hover:text-nuren-pink transition-colors">Contact</a></li>
             </ul>
           </div>
@@ -1253,6 +1251,869 @@ const Footer = () => {
         </div>
       </div>
     </footer>
+  );
+};
+
+// --- Media Hub Page ---
+
+const MediaHubPage = () => {
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
+  const newsItems = [
+    { 
+      title: "Parenting platform Nuren Group's 10-year journey, SuperApp and NASDAQ IPO plans", 
+      date: 'March 2026', 
+      category: 'Podcast', 
+      link: 'https://www.bfm.my/content/podcast/parenting-platform-nuren-groups-10-year-journey-superapp-and-nasdaq-ipo-plans',
+      isPodcast: true,
+      source: "BFM 89.9"
+    },
+    { 
+      title: "Nuren Group champions women's empowerment in the digital trade", 
+      date: 'September 2024', 
+      category: 'Media',
+      link: 'https://themalaysianreserve.com/2024/09/24/nuren-group-champions-womens-empowerment-in-the-digital-trade-through-innovative-platforms/',
+      source: "The Malaysian Reserve"
+    },
+    { 
+      title: "Enlinea Sdn Bhd celebrates triumph at AOTY & MARKies Awards 2024", 
+      date: 'May 2024', 
+      category: 'Awards',
+      link: 'https://www.marketing-interactive.com/enlinea-sdn-bhd-celebrates-triumph-at-aoty-markies-awards-2024',
+      source: "Marketing Interactive"
+    },
+    { 
+      title: "Nuren Group: A Case Study on Digital Transformation", 
+      date: '2024', 
+      category: 'Academic',
+      link: 'https://ir.uitm.edu.my/id/eprint/55177/',
+      source: "UiTM Institutional Repository"
+    },
+    {
+      title: "Motherhood.com.my: Empowering Mothers Through Every Stage",
+      date: "2024",
+      category: "Feature",
+      link: "https://nurengroup.com/mediahub",
+      source: "Nuren Group"
+    },
+    {
+      title: "Ibuencer: The Rise of Mom-Influencers in Southeast Asia",
+      date: "2024",
+      category: "Insight",
+      link: "https://nurengroup.com/mediahub",
+      source: "Nuren Group"
+    }
+  ];
+
+  return (
+    <div className="pt-20">
+      <Helmet>
+        <title>Media Hub | Nuren Group - News, Insights & Press</title>
+        <meta name="description" content="Stay updated with the latest news, press releases, and media coverage from Nuren Group, Southeast Asia's leading parenting ecosystem." />
+      </Helmet>
+
+      {/* Hero Section */}
+      <section className="py-24 bg-slate-50">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="max-w-3xl">
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="inline-block px-4 py-2 bg-nuren-pink/10 text-nuren-pink rounded-full text-sm font-bold mb-6"
+            >
+              Media Hub
+            </motion.div>
+            <motion.h1 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="text-5xl md:text-7xl font-bold text-slate-900 mb-8 leading-tight"
+            >
+              News, Insights & <span className="text-nuren-pink">Culture</span>
+            </motion.h1>
+            <motion.p 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="text-xl text-slate-600 mb-10 leading-relaxed"
+            >
+              Discover the latest updates, stories, and collaborative culture that define Nuren Group's journey in Southeast Asia.
+            </motion.p>
+          </div>
+        </div>
+      </section>
+
+      {/* News Grid */}
+      <section className="py-24">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {newsItems.map((news, idx) => (
+              <motion.a 
+                key={idx}
+                href={news.link}
+                target="_blank"
+                rel="noopener noreferrer"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: idx * 0.1 }}
+                className="bg-white rounded-[32px] border border-slate-100 overflow-hidden hover:shadow-2xl transition-all group flex flex-col"
+              >
+                <div className="p-8 flex-grow">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-slate-400 group-hover:bg-nuren-pink/10 group-hover:text-nuren-pink transition-colors">
+                      {news.isPodcast ? <Mic size={20} /> : <Newspaper size={20} />}
+                    </div>
+                    <div>
+                      <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">{news.category}</span>
+                      <span className="block text-[10px] font-bold uppercase tracking-wider text-nuren-pink">{news.source}</span>
+                    </div>
+                  </div>
+                  <h3 className="text-xl font-bold text-slate-900 mb-4 group-hover:text-nuren-pink transition-colors leading-tight">
+                    {news.title}
+                  </h3>
+                </div>
+                <div className="px-8 py-6 bg-slate-50 border-t border-slate-100 flex justify-between items-center">
+                  <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">{news.date}</span>
+                  <div className="flex items-center gap-2 text-nuren-pink font-bold text-sm">
+                    Read More
+                    <ExternalLink size={14} />
+                  </div>
+                </div>
+              </motion.a>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Press Contact */}
+      <section className="py-24 bg-slate-900 text-white rounded-[64px] mx-6 mb-24">
+        <div className="max-w-3xl mx-auto px-6 text-center">
+          <Megaphone className="text-nuren-pink mx-auto mb-8" size={64} />
+          <h2 className="text-4xl font-bold mb-6">Media Inquiries</h2>
+          <p className="text-slate-400 text-lg mb-10 leading-relaxed">
+            For press releases, media kits, or interview requests, please reach out to our communications team.
+          </p>
+          <a 
+            href="mailto:pr@nurengroup.com" 
+            className="inline-flex items-center gap-2 bg-nuren-pink text-white px-10 py-4 rounded-full font-bold text-lg hover:bg-nuren-pink/90 transition-all shadow-lg shadow-nuren-pink/20"
+          >
+            Contact Press Team
+            <ArrowRight size={20} />
+          </a>
+        </div>
+      </section>
+    </div>
+  );
+};
+
+// --- Board of Directors Page ---
+
+const BoardOfDirectorsPage = () => {
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
+  const directors = [
+    {
+      name: "Prof Dr K.Y. Wong",
+      role: "Group Chairman, Independent Director",
+      image: "/prof-dr-wong.png",
+      bio: "Economist Prof Dr Wong, is Director of EUDA Health Holdings Limited (NASDAQ:EUDA), Director of E-Plus Ltd (NSX:8EP) and CEO of D'Mace Group Ltd (Singapore). He holds PhD from Strathclyde Business School (UK), postdoctoral at Peking University (China), BBA from Western Michigan University (USA) and M.Econ from University Putra (Malaysia). With a distinguished career as both scholar and corporate leader, Prof Dr Wong has held various executive positions in public listed companies, VP/deanship with universities, and lead consultant roles in several initiatives with ASEAN and UNWTO. From 2004 to 2016, he served as advisor to the government of Malaysia, SEA nations and China. In 2010, he led the National Key Economic Area EPP10, an essential component of Malaysia's Economic Transformation Program under the Prime Minister's Office. Prof Dr Wong's significant experience in the fields of business, economic policy and planning, showcase his ability to provide strategic guidance as Chairman of Nuren Group."
+    },
+    {
+      name: "Petrina Goh",
+      role: "Group CEO, Executive Director",
+      image: "/petrina-goh.png",
+      bio: "Founder and CEO of the group. She is an accomplished professional with a diverse background in the technology and finance sectors. She holds a Master Degree (Accounting & Finance) from University of Bath; and Bachelor Degree (Engineering) from University of Hull. Prior to this, she served as a tech consultant in Accenture, where she honed her expertise in the industry. Additionally, her tenure as an investment banker in CIMB Investment Bank (Malaysia) and Tael Partners (Malaysia) allowed her to manage a substantial investment portfolio, specializing in the evaluation of technology sector deals. Ms Goh is a recipient of MVCA Outstanding Women Entrepreneur of the year 2018 and the Inti Alumni Young Entrepreneur of the Year Award 2016. Besides being active keynote speakers, she is also a strong supporter of women in tech. Her remarkable journey and expertise make her a prominent figure in both the technology and business realms."
+    },
+    {
+      name: "Kelvin Leow",
+      role: "CTO, Executive Director",
+      image: "/kelvin-leow.png",
+      bio: "Mr Leow is a seasoned professional with over 20 years of experience in the tech industry. He holds a PMP certification and an honours degree in Software Engineering from the University of New South Wales, Australia. Mr Leow began his career in Sydney and has gained experience working in Malaysia, Singapore, Cambodia, and the United States. Throughout his career, Mr Leow has worked in software development, project management, and technology consulting. He has held key positions at Intel Malaysia and Motorola Australia, focusing on manufacturing automation and mobile messaging software. As an entrepreneur, he co-founded Claritas, a cloud-based CRM solution company, which was acquired by Incite Innovations in 2022. Mr Leow is recognized as an industry thought leader, having been a keynote speaker at numerous innovation and technology conferences. His expertise includes solution architecture, CRM, AI, digital media, retail management, and fintech. Currently, Mr Leow leads technology innovation and product direction at Nuren Group."
+    },
+    {
+      name: "Dato Y.K. Eng",
+      role: "Independent, Non-Executive Director",
+      image: "/datoeng.png",
+      bio: "Dato Eng is a prominent entrepreneur in Malaysia, particularly noted for his contributions to the confinement care industry and women's wellness. He began his entrepreneurial journey at 18, after graduating from high school in 2002. Mr Yee Koon Eng and his wife established Cozzi Confinement Centre (“Cozzi”) in 2017, providing affordable postnatal care including baby care, mother care, nutritious meals, and professional guidance. The success of the initial centre prompted further expansions of 5 centres to date. Cozzi has also focused on maternal education, organizing over 25 talks since 2021 on topics related to women and baby wellness. In 2021, Dato Eng acquired stakes in Itsherbs (“IH”), which addresses women's fertility concerns through Traditional Chinese Medicine and serves over 30,000 customers. In 2022, Dato Eng was also appointed as an advisor to Tradisi Bidan House (“TBH Wellness”), a company offering traditional postnatal massages. Under Dato Eng's leadership, Cozzi and his associated ventures continue to provide comprehensive wellness services for women in Malaysia."
+    },
+    {
+      name: "Paul Fong",
+      role: "Independent, Non-Executive",
+      image: "/paul-fong.png",
+      bio: "Mr Fong has decades of experience in business and law. Educated at the University of New South Wales, Mr Fong holds a Bachelor of Jurisprudence and a Bachelor of Laws, equipping him with a strong foundation in legal principles and critical thinking. His career began in Kuala Lumpur (Malaysia), where he honed his legal expertise at prestigious firms such as Hamzah Abu Samah & Partners and Yusuf Khan & Fong. Relocating to Sydney and in his recent role as a Director at D’Mace Capital Pty Ltd, a boutique financial service provider, Mr Fong leverages his extensive legal background to ensure compliance, mitigate risks and foster ethical business practices. He is deeply committed to driving innovation, sustainability, and long-term growth, while maintaining the highest standards of corporate governance."
+    }
+  ];
+
+  return (
+    <div className="pt-20">
+      <Helmet>
+        <title>Board of Directors | Nuren Group - Leadership & Governance</title>
+        <meta name="description" content="Meet the Board of Directors of Nuren Group, providing strategic oversight and guidance for Southeast Asia's leading digital family ecosystem." />
+      </Helmet>
+
+      {/* Hero Section */}
+      <section className="py-24 bg-slate-900 text-white overflow-hidden relative">
+        <div className="absolute top-0 right-0 w-full h-full opacity-10 pointer-events-none">
+          <svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none">
+            <path d="M0 100 C 20 0 50 0 100 100" stroke="white" fill="transparent" strokeWidth="0.5" />
+          </svg>
+        </div>
+        <div className="max-w-7xl mx-auto px-6 relative z-10 text-center">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="inline-block px-4 py-2 bg-nuren-pink/20 text-nuren-pink rounded-full text-sm font-bold mb-6 border border-nuren-pink/30"
+          >
+            Leadership
+          </motion.div>
+          <motion.h1 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="text-5xl md:text-7xl font-bold mb-8"
+          >
+            Board of <span className="text-nuren-pink">Directors</span>
+          </motion.h1>
+          <motion.p 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="text-xl text-slate-400 max-w-3xl mx-auto leading-relaxed"
+          >
+            Our board brings together a wealth of experience in technology, finance, and regional market expansion to guide Nuren Group's strategic vision.
+          </motion.p>
+        </div>
+      </section>
+
+      {/* Directors List */}
+      <section className="py-24">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="space-y-24">
+            {directors.map((director, idx) => (
+              <motion.div 
+                key={idx}
+                initial={{ opacity: 0, y: 40 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "-100px" }}
+                className={`flex flex-col ${idx % 2 === 0 ? 'md:flex-row' : 'md:flex-row-reverse'} gap-12 items-center`}
+              >
+                <div className="w-full md:w-1/3">
+                  <div className="relative aspect-[4/5] rounded-[40px] overflow-hidden shadow-2xl shadow-slate-200">
+                    <img 
+                      src={director.image} 
+                      alt={director.name} 
+                      className="w-full h-full object-cover"
+                      referrerPolicy="no-referrer"
+                    />
+                  </div>
+                </div>
+                <div className="w-full md:w-2/3">
+                  <motion.div 
+                    initial={{ opacity: 0, x: idx % 2 === 0 ? 20 : -20 }}
+                    whileInView={{ opacity: 1, x: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: 0.2 }}
+                  >
+                    <div className="inline-block px-4 py-1 bg-nuren-pink/10 text-nuren-pink rounded-full text-xs font-bold mb-4 uppercase tracking-widest">
+                      {director.role}
+                    </div>
+                    <h3 className="text-4xl font-bold text-slate-900 mb-6">{director.name}</h3>
+                    <div className="w-20 h-1.5 bg-nuren-pink rounded-full mb-8" />
+                    <p className="text-lg text-slate-600 leading-relaxed mb-6">
+                      {director.bio}
+                    </p>
+                  </motion.div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Governance Statement */}
+      <section className="py-24 bg-slate-50">
+        <div className="max-w-5xl mx-auto px-6 text-center">
+          <h2 className="text-3xl font-bold text-slate-900 mb-8">Corporate Governance</h2>
+          <p className="text-lg text-slate-600 leading-relaxed mb-12">
+            Nuren Group is committed to the highest standards of corporate governance. Our board ensures that the company operates with integrity, transparency, and accountability to all stakeholders, including our community of mothers, brand partners, and investors.
+          </p>
+          <div className="grid md:grid-cols-3 gap-8">
+            <div className="p-6 bg-white rounded-3xl shadow-sm border border-slate-100">
+              <ShieldCheck className="text-nuren-pink mx-auto mb-4" size={32} />
+              <h4 className="font-bold mb-2">Integrity</h4>
+              <p className="text-sm text-slate-500">Ethical conduct in all business dealings.</p>
+            </div>
+            <div className="p-6 bg-white rounded-3xl shadow-sm border border-slate-100">
+              <Globe className="text-blue-500 mx-auto mb-4" size={32} />
+              <h4 className="font-bold mb-2">Responsibility</h4>
+              <p className="text-sm text-slate-500">Accountability to our community and partners.</p>
+            </div>
+            <div className="p-6 bg-white rounded-3xl shadow-sm border border-slate-100">
+              <BarChart3 className="text-emerald-500 mx-auto mb-4" size={32} />
+              <h4 className="font-bold mb-2">Transparency</h4>
+              <p className="text-sm text-slate-500">Clear and open communication with stakeholders.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+};
+
+// --- Investors Page ---
+
+// --- Corporate Governance Page ---
+
+const CorporateGovernancePage = () => {
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
+  const principles = [
+    {
+      title: "Integrity & Ethics",
+      desc: "We maintain the highest standards of integrity in all our dealings, ensuring ethical conduct across every level of the organization.",
+      icon: <ShieldCheck className="text-nuren-pink" size={32} />
+    },
+    {
+      title: "Transparency",
+      desc: "We are committed to clear, accurate, and timely disclosure of information to our shareholders and the public.",
+      icon: <BarChart3 className="text-blue-500" size={32} />
+    },
+    {
+      title: "Accountability",
+      desc: "Our board and management are accountable for the company's performance and for protecting the interests of all stakeholders.",
+      icon: <Gavel className="text-purple-600" size={32} />
+    }
+  ];
+
+  const committees = [
+    {
+      name: "Audit Committee",
+      desc: "Oversees financial reporting, internal controls, and the external audit process to ensure financial integrity."
+    },
+    {
+      name: "Remuneration Committee",
+      desc: "Ensures that executive compensation is fair, competitive, and aligned with the long-term interests of the company."
+    },
+    {
+      name: "Nomination Committee",
+      desc: "Responsible for board composition, succession planning, and ensuring a diverse and capable leadership team."
+    }
+  ];
+
+  return (
+    <div className="pt-20">
+      <Helmet>
+        <title>Corporate Governance | Nuren Group - Ethics & Transparency</title>
+        <meta name="description" content="Learn about Nuren Group's commitment to corporate governance, ethical business practices, and transparency." />
+      </Helmet>
+
+      {/* Hero Section */}
+      <section className="py-24 bg-slate-900 text-white overflow-hidden relative">
+        <div className="absolute top-0 right-0 w-full h-full opacity-10 pointer-events-none">
+          <svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none">
+            <path d="M0 100 C 20 0 50 0 100 100" stroke="white" fill="transparent" strokeWidth="0.5" />
+          </svg>
+        </div>
+        <div className="max-w-7xl mx-auto px-6 relative z-10 text-center">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="inline-block px-4 py-2 bg-nuren-pink/20 text-nuren-pink rounded-full text-sm font-bold mb-6 border border-nuren-pink/30"
+          >
+            Governance
+          </motion.div>
+          <motion.h1 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="text-5xl md:text-7xl font-bold mb-8"
+          >
+            Corporate <span className="text-nuren-pink">Governance</span>
+          </motion.h1>
+          <motion.p 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="text-xl text-slate-400 max-w-3xl mx-auto leading-relaxed"
+          >
+            Nuren Group is committed to the highest standards of corporate governance, ensuring transparency, accountability, and ethical business practices.
+          </motion.p>
+        </div>
+      </section>
+
+      {/* Core Principles */}
+      <section className="py-24">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl font-bold text-slate-900 mb-4">Our Core Principles</h2>
+            <p className="text-slate-600 max-w-2xl mx-auto text-lg">
+              These principles guide our decision-making and ensure we build long-term value for our stakeholders.
+            </p>
+          </div>
+          <div className="grid md:grid-cols-3 gap-12">
+            {principles.map((principle, idx) => (
+              <motion.div 
+                key={idx}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: idx * 0.1 }}
+                className="p-10 rounded-[40px] bg-white border border-slate-100 shadow-xl shadow-slate-200/50 hover:shadow-2xl transition-all"
+              >
+                <div className="w-16 h-16 rounded-2xl bg-slate-50 flex items-center justify-center mb-8">
+                  {principle.icon}
+                </div>
+                <h3 className="text-2xl font-bold text-slate-900 mb-4">{principle.title}</h3>
+                <p className="text-slate-600 leading-relaxed">
+                  {principle.desc}
+                </p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Board Committees */}
+      <section className="py-24 bg-slate-50">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="grid lg:grid-cols-2 gap-16 items-center">
+            <div>
+              <h2 className="text-4xl font-bold text-slate-900 mb-6">Board Committees</h2>
+              <p className="text-lg text-slate-600 mb-10 leading-relaxed">
+                Our board committees play a vital role in ensuring that specific areas of governance are handled with the necessary expertise and focus.
+              </p>
+              <div className="space-y-6">
+                {committees.map((committee, idx) => (
+                  <motion.div 
+                    key={idx}
+                    initial={{ opacity: 0, x: -20 }}
+                    whileInView={{ opacity: 1, x: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: idx * 0.1 }}
+                    className="p-6 bg-white rounded-3xl border border-slate-100 shadow-sm"
+                  >
+                    <h4 className="font-bold text-slate-900 mb-2">{committee.name}</h4>
+                    <p className="text-slate-500 text-sm">{committee.desc}</p>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+            <div className="relative">
+              <div className="aspect-square rounded-[64px] overflow-hidden shadow-2xl">
+                <img 
+                  src="https://picsum.photos/seed/governance/800/800" 
+                  alt="Governance" 
+                  className="w-full h-full object-cover"
+                  referrerPolicy="no-referrer"
+                />
+              </div>
+              <div className="absolute -bottom-8 -left-8 bg-nuren-pink text-white p-8 rounded-[32px] shadow-xl max-w-xs">
+                <p className="text-lg font-bold">"Governance is not just about compliance; it's about building trust."</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Policies & Documents */}
+      <section className="py-24">
+        <div className="max-w-5xl mx-auto px-6 text-center">
+          <h2 className="text-4xl font-bold text-slate-900 mb-8">Policies & Disclosures</h2>
+          <p className="text-lg text-slate-600 leading-relaxed mb-12">
+            We maintain a comprehensive set of policies to ensure that our operations are conducted ethically and in compliance with all applicable laws and regulations.
+          </p>
+          <div className="grid md:grid-cols-2 gap-6">
+            {governanceDocs.slice(0, 6).map((doc, idx) => (
+              <Link 
+                key={idx} 
+                to={`/investors/governance-documents/${doc.id}`}
+                className="flex items-center justify-between p-6 bg-slate-50 rounded-2xl hover:bg-slate-100 transition-colors cursor-pointer group"
+              >
+                <div className="flex items-center gap-4">
+                  <FileText className="text-slate-400 group-hover:text-nuren-pink transition-colors" size={24} />
+                  <span className="font-bold text-slate-700">{doc.title}</span>
+                </div>
+                <ArrowRight className="text-slate-300 group-hover:text-nuren-pink transition-all group-hover:translate-x-1" size={20} />
+              </Link>
+            ))}
+          </div>
+          <div className="mt-12">
+            <Link 
+              to="/investors/governance-documents" 
+              className="inline-flex items-center gap-2 text-nuren-pink font-bold hover:gap-3 transition-all"
+            >
+              View All Governance Documents
+              <ArrowRight size={20} />
+            </Link>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+};
+
+// --- Governance Documents Page ---
+
+const GovernanceDocumentsPage = () => {
+  const { docId } = useParams();
+  const [selectedDoc, setSelectedDoc] = useState(governanceDocs[0]);
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    if (docId) {
+      const doc = governanceDocs.find(d => d.id === docId);
+      if (doc) setSelectedDoc(doc);
+    }
+  }, [docId]);
+
+  return (
+    <div className="pt-20">
+      <Helmet>
+        <title>Governance Documents | Nuren Group</title>
+      </Helmet>
+
+      <section className="py-16 bg-slate-50 border-b border-slate-200">
+        <div className="max-w-7xl mx-auto px-6">
+          <Link to="/investors/corporate-governance" className="inline-flex items-center gap-2 text-slate-500 hover:text-nuren-pink mb-8 transition-colors">
+            <ChevronRight className="rotate-180" size={20} />
+            Back to Corporate Governance
+          </Link>
+          <h1 className="text-4xl font-bold text-slate-900">Governance Documents</h1>
+        </div>
+      </section>
+
+      <section className="py-12">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="grid lg:grid-cols-4 gap-12">
+            {/* Sidebar */}
+            <div className="lg:col-span-1">
+              <div className="sticky top-32 space-y-8">
+                <div>
+                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Committee Charters</h3>
+                  <div className="space-y-1">
+                    {governanceDocs.filter(d => d.category === 'Charter').map(doc => (
+                      <button
+                        key={doc.id}
+                        onClick={() => setSelectedDoc(doc)}
+                        className={`w-full text-left px-4 py-2 rounded-xl text-sm font-medium transition-all ${selectedDoc.id === doc.id ? 'bg-nuren-pink text-white shadow-lg shadow-nuren-pink/20' : 'text-slate-600 hover:bg-slate-100'}`}
+                      >
+                        {doc.title}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Corporate Policies</h3>
+                  <div className="space-y-1">
+                    {governanceDocs.filter(d => d.category === 'Policy').map(doc => (
+                      <button
+                        key={doc.id}
+                        onClick={() => setSelectedDoc(doc)}
+                        className={`w-full text-left px-4 py-2 rounded-xl text-sm font-medium transition-all ${selectedDoc.id === doc.id ? 'bg-nuren-pink text-white shadow-lg shadow-nuren-pink/20' : 'text-slate-600 hover:bg-slate-100'}`}
+                      >
+                        {doc.title}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Statements</h3>
+                  <div className="space-y-1">
+                    {governanceDocs.filter(d => d.category === 'Statement').map(doc => (
+                      <button
+                        key={doc.id}
+                        onClick={() => setSelectedDoc(doc)}
+                        className={`w-full text-left px-4 py-2 rounded-xl text-sm font-medium transition-all ${selectedDoc.id === doc.id ? 'bg-nuren-pink text-white shadow-lg shadow-nuren-pink/20' : 'text-slate-600 hover:bg-slate-100'}`}
+                      >
+                        {doc.title}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="lg:col-span-3">
+              <motion.div
+                key={selectedDoc.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-white p-8 md:p-12 rounded-[40px] border border-slate-100 shadow-xl shadow-slate-200/50 min-h-[600px]"
+              >
+                <div className="inline-block px-3 py-1 bg-slate-100 text-slate-500 rounded-full text-xs font-bold mb-6 uppercase tracking-wider">
+                  {selectedDoc.category}
+                </div>
+                <h2 className="text-3xl font-bold text-slate-900 mb-8">{selectedDoc.title}</h2>
+                <div 
+                  className="prose prose-slate max-w-none prose-headings:text-slate-900 prose-p:text-slate-600 prose-li:text-slate-600 prose-h2:text-2xl prose-h2:mt-12 prose-h2:mb-6"
+                  dangerouslySetInnerHTML={{ __html: selectedDoc.content }}
+                />
+              </motion.div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+};
+
+const InvestorsPage = () => {
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
+  return (
+    <div className="pt-20">
+      <Helmet>
+        <title>Investors | Nuren Group - Investor Relations & Governance</title>
+        <meta name="description" content="Access key information about Nuren Group's performance, governance, and market announcements for our investor community." />
+      </Helmet>
+
+      {/* Hero Section */}
+      <section className="py-24 bg-slate-50">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="max-w-3xl">
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="inline-block px-4 py-2 bg-nuren-pink/10 text-nuren-pink rounded-full text-sm font-bold mb-6"
+            >
+              Investor Relations
+            </motion.div>
+            <motion.h1 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="text-5xl md:text-7xl font-bold text-slate-900 mb-8 leading-tight"
+            >
+              Transparency & <span className="text-nuren-pink">Growth</span>
+            </motion.h1>
+            <motion.p 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="text-xl text-slate-600 mb-10 leading-relaxed"
+            >
+              Nuren Group is committed to maintaining the highest standards of corporate governance and providing clear, timely information to our shareholders and the investment community.
+            </motion.p>
+          </div>
+        </div>
+      </section>
+
+      <Investors />
+      <BoardOfDirectors />
+
+      {/* Investment Highlights */}
+      <section className="py-24 bg-slate-900 text-white rounded-[64px] mx-6 mb-24">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl font-bold mb-4">Investment Highlights</h2>
+            <p className="text-slate-400 max-w-2xl mx-auto text-lg">
+              Why Nuren Group is positioned for long-term success in the digital economy.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-8">
+            {[
+              {
+                title: "Market Leadership",
+                desc: "Malaysia's #1 parenting platform with a growing footprint across Southeast Asia."
+              },
+              {
+                title: "Scalable Model",
+                desc: "A community-powered commerce flywheel that drives efficient user acquisition and high lifetime value."
+              },
+              {
+                title: "Data Advantage",
+                desc: "Proprietary data insights that enable precision targeting and high-margin brand solutions."
+              }
+            ].map((item, idx) => (
+              <motion.div 
+                key={idx}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: idx * 0.1 }}
+                className="p-8 rounded-3xl bg-white/5 border border-white/10"
+              >
+                <h3 className="text-xl font-bold mb-4 text-nuren-pink">{item.title}</h3>
+                <p className="text-slate-400 leading-relaxed">{item.desc}</p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+};
+
+// --- Careers Page ---
+
+const CareersPage = () => {
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
+  const benefits = [
+    {
+      title: "Growth & Learning",
+      desc: "We invest in our people. From workshops to hands-on experience in a fast-growing tech company.",
+      icon: <Zap className="text-nuren-pink" size={24} />,
+    },
+    {
+      title: "Inclusive Culture",
+      desc: "A diverse team where every voice matters. We celebrate different perspectives and ideas.",
+      icon: <Users className="text-blue-500" size={24} />,
+    },
+    {
+      title: "Impactful Work",
+      desc: "Help us build the future of parenting and commerce in Southeast Asia. Your work touches millions.",
+      icon: <Heart className="text-red-500" size={24} />,
+    },
+    {
+      title: "Flexible Environment",
+      desc: "We focus on results. Enjoy a dynamic work environment that values work-life balance.",
+      icon: <Globe className="text-emerald-500" size={24} />,
+    }
+  ];
+
+  const departments = [
+    { name: "Tech & Engineering", roles: ["Frontend Developer", "Backend Developer", "Mobile App Developer"] },
+    { name: "Marketing & Growth", roles: ["Performance Marketing", "SEO Specialist", "Social Media Manager"] },
+    { name: "Content & Creative", roles: ["Content Writer", "Video Editor", "Graphic Designer"] },
+    { name: "Sales & Partnerships", roles: ["Account Manager", "Business Development", "Sales Executive"] },
+    { name: "Operations & HR", roles: ["HR Generalist", "Operations Executive", "Admin Support"] },
+    { name: "Data & Analytics", roles: ["Data Analyst", "Business Intelligence", "Data Scientist"] }
+  ];
+
+  return (
+    <div className="pt-20">
+      <Helmet>
+        <title>Careers | Nuren Group - Join Our Mission</title>
+        <meta name="description" content="Join Nuren Group and help us build Southeast Asia's leading community-powered commerce platform for women and families." />
+      </Helmet>
+
+      {/* Hero Section */}
+      <section className="py-24 bg-slate-50">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="max-w-3xl">
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="inline-block px-4 py-2 bg-nuren-pink/10 text-nuren-pink rounded-full text-sm font-bold mb-6"
+            >
+              Join the Team
+            </motion.div>
+            <motion.h1 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="text-5xl md:text-7xl font-bold text-slate-900 mb-8 leading-tight"
+            >
+              Build the Future of <span className="text-nuren-pink">Parenting</span>
+            </motion.h1>
+            <motion.p 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="text-xl text-slate-600 mb-10 leading-relaxed"
+            >
+              We are looking for passionate, innovative, and driven individuals to help us empower women and families across Southeast Asia.
+            </motion.p>
+          </div>
+        </div>
+      </section>
+
+      {/* Why Join Us */}
+      <section className="py-24">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl font-bold text-slate-900 mb-4">Why Join Nuren Group?</h2>
+            <p className="text-slate-600 max-w-2xl mx-auto text-lg">
+              We offer more than just a job. We offer a chance to make a real difference in the lives of millions.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+            {benefits.map((benefit, idx) => (
+              <motion.div 
+                key={idx}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: idx * 0.1 }}
+                className="p-8 rounded-3xl border border-slate-100 bg-white hover:shadow-xl transition-all"
+              >
+                <div className="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center mb-6">
+                  {benefit.icon}
+                </div>
+                <h3 className="text-xl font-bold text-slate-900 mb-4">{benefit.title}</h3>
+                <p className="text-slate-600 leading-relaxed">
+                  {benefit.desc}
+                </p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Open Positions */}
+      <section className="py-24 bg-slate-900 text-white rounded-[64px] mx-6 mb-24">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl font-bold mb-4">Open Positions</h2>
+            <p className="text-slate-400 max-w-2xl mx-auto text-lg">
+              Explore our current opportunities and find where you fit in.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {departments.map((dept, idx) => (
+              <motion.div 
+                key={idx}
+                initial={{ opacity: 0, scale: 0.95 }}
+                whileInView={{ opacity: 1, scale: 1 }}
+                viewport={{ once: true }}
+                transition={{ delay: idx * 0.05 }}
+                className="p-8 rounded-3xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all group"
+              >
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-xl font-bold">{dept.name}</h3>
+                  <ChevronRight className="text-nuren-pink group-hover:translate-x-1 transition-transform" />
+                </div>
+                <div className="space-y-2">
+                  {dept.roles.map((role, rIdx) => (
+                    <div key={rIdx} className="text-slate-400 text-sm flex items-center gap-2">
+                      <div className="w-1 h-1 bg-nuren-pink rounded-full" />
+                      {role}
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            ))}
+          </div>
+
+          <div className="mt-16 text-center">
+            <p className="text-slate-400 mb-8">Don't see a role that fits? We're always looking for talent. Send your CV to us!</p>
+            <a 
+              href="mailto:hi@nurengroup.com" 
+              className="inline-flex items-center gap-2 bg-nuren-pink text-white px-10 py-4 rounded-full font-bold text-lg hover:bg-nuren-pink/90 transition-all shadow-lg shadow-nuren-pink/20"
+            >
+              Email CV to hi@nurengroup.com
+              <ArrowRight size={20} />
+            </a>
+          </div>
+        </div>
+      </section>
+    </div>
   );
 };
 
@@ -1557,8 +2418,6 @@ const Home = ({ onContactClick }: { onContactClick: () => void }) => {
       <BrandSolutions onContactClick={onContactClick} />
       <CaseStudies />
       <Newsroom />
-      <Investors />
-      <BoardOfDirectors />
       <VisionSection />
       
       {/* Call to Action Section */}
@@ -1600,6 +2459,13 @@ export default function App() {
             <Routes>
               <Route path="/" element={<Home onContactClick={() => setIsContactModalOpen(true)} />} />
               <Route path="/ecosystem" element={<EcosystemPage onContactClick={() => setIsContactModalOpen(true)} />} />
+              <Route path="/investors" element={<InvestorsPage />} />
+              <Route path="/media-hub" element={<MediaHubPage />} />
+              <Route path="/investors/corporate-governance" element={<CorporateGovernancePage />} />
+              <Route path="/investors/governance-documents" element={<GovernanceDocumentsPage />} />
+              <Route path="/investors/governance-documents/:docId" element={<GovernanceDocumentsPage />} />
+              <Route path="/board-of-directors" element={<BoardOfDirectorsPage />} />
+              <Route path="/careers" element={<CareersPage />} />
             </Routes>
           </main>
 
