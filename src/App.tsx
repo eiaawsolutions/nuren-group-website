@@ -631,6 +631,12 @@ const products = [
     desc: 'An organized school tour program featuring curated workshops and sampling activations, creating an educational, enriching, and fun learning experience for children while offering brands direct engagement in a trusted school environment.',
     image: '/schooloutreach.png',
     platformLink: 'https://www.motherhood.com.my/',
+  },
+  { 
+    name: 'Nuren Insights', 
+    desc: 'A specialized data and research platform providing brands with deep insights into Southeast Asian family consumption patterns and trends.',
+    image: '/Success-motherhoodchoiceaward.png',
+    platformLink: 'https://nuren.asia/',
   }
 ];
 
@@ -648,14 +654,14 @@ const Products = ({ showAll = false }: { showAll?: boolean }) => {
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-8">
           {displayProducts.map((product, idx) => (
             <motion.div 
               key={idx}
               whileHover={{ y: -10 }}
-              className="group bg-white rounded-3xl overflow-hidden border border-slate-100 shadow-sm hover:shadow-xl transition-all flex flex-col"
+              className="group bg-white rounded-2xl md:rounded-3xl overflow-hidden border border-slate-100 shadow-sm hover:shadow-xl transition-all flex flex-col"
             >
-              <div className="relative h-56 overflow-hidden">
+              <div className="relative aspect-video md:h-56 overflow-hidden">
                 <img 
                   src={product.image} 
                   alt={product.name} 
@@ -673,12 +679,12 @@ const Products = ({ showAll = false }: { showAll?: boolean }) => {
                   </div>
                 )}
               </div>
-              <div className="p-8 flex-1 flex flex-col">
-                <h3 className="text-2xl font-bold text-slate-900 mb-3">{product.name}</h3>
-                <p className="text-slate-600 text-sm leading-relaxed mb-6 flex-1">
+              <div className="p-4 md:p-8 flex-1 flex flex-col">
+                <h3 className="text-lg md:text-2xl font-bold text-slate-900 mb-2 md:mb-3">{product.name}</h3>
+                <p className="text-slate-600 text-xs md:text-sm leading-relaxed mb-4 md:mb-6 flex-1 line-clamp-3 md:line-clamp-none">
                   {product.desc}
                 </p>
-                <div className="flex flex-col gap-3">
+                <div className="flex flex-col gap-2 md:gap-3">
                   {product.platformLink && (
                     <a 
                       href={product.platformLink} 
