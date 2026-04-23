@@ -235,6 +235,44 @@ const ContactModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => voi
   );
 };
 
+const SEO = ({ title, description, keywords, canonical, ogImage }: { 
+  title: string, 
+  description: string, 
+  keywords?: string, 
+  canonical?: string,
+  ogImage?: string
+}) => (
+  <Helmet>
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    {keywords && <meta name="keywords" content={keywords} />}
+    <link rel="canonical" href={canonical || "https://nurengroup.com/"} />
+    
+    {/* Geo Tags */}
+    <meta name="geo.region" content="MY-10" />
+    <meta name="geo.placename" content="Kuala Lumpur" />
+    <meta name="geo.position" content="3.1390;101.6869" />
+    <meta name="ICBM" content="3.1390, 101.6869" />
+    
+    {/* Distribution and Rating */}
+    <meta name="distribution" content="global" />
+    <meta name="rating" content="general" />
+    
+    {/* Open Graph */}
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:image" content={ogImage || "https://nurengroup.com/NurenGroup.jpg"} />
+    <meta property="og:url" content={window.location.href} />
+    <meta property="og:type" content="website" />
+    
+    {/* Twitter */}
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImage || "https://nurengroup.com/NurenGroup.jpg"} />
+  </Helmet>
+);
+
 const Navbar = ({ onContactClick }: { onContactClick: () => void }) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -496,106 +534,109 @@ const Stats = () => {
   );
 };
 
-const Products = () => {
-  const [activeVideo, setActiveVideo] = useState<string | null>(null);
+// --- Data ---
 
-  const products = [
-    { 
-      name: 'Motherhood.com.my', 
-      desc: "Malaysia's #1 parenting marketplace and community, offering brands direct access to a high-intent audience of millions of parents.",
-      image: '/motherhood.jpg',
-      platformLink: 'https://home.motherhood.com.my/',
-    },
-    { 
-      name: 'Kelabmama', 
-      desc: 'A premium content ecosystem where brands can integrate into trusted narratives, reaching a loyal community of engaged mothers.',
-      image: '/Kelabmama.png',
-      platformLink: 'https://kelabmama.com',
-    },
-    { 
-      name: 'Ibuencer.com', 
-      desc: "The region's largest mom-influencer network, driving authentic brand advocacy and high-impact social commerce through 10,000+ creators.",
-      image: '/ibuencer.png',
-      platformLink: 'https://www.ibuencer.com/',
-      videoLink: 'https://youtu.be/5JZt0qRkPsQ?si=9qvCEB4hZ2Hv4vOQ'
-    },
-    { 
-      name: 'Parentcraft', 
-      desc: 'A specialized educational platform for brands to establish thought leadership and provide value-added skills to new and expecting parents.',
-      image: '/parentcraft.png',
-      platformLink: 'https://www.motherhood.com.my/event/parentcraft-class',
-      videoLink: 'https://youtu.be/bJjLpYrekNs'
-    },
-    { 
-      name: 'Ask Me Doctor', 
-      desc: 'A high-trust medical advice platform where healthcare and wellness brands can connect with families through expert-led content.',
-      image: '/askmeDoctor.jpg',
-      platformLink: 'https://home.motherhood.com.my/',
-      videoLink: 'https://youtu.be/PquKkf4wM14?si=1uFO1G2aR2T9e_1F'
-    },
-    { 
-      name: 'Motherhood Choice Award', 
-      desc: "The gold standard of parenting excellence, providing brands with the ultimate seal of approval from Malaysia's largest voting community.",
-      image: '/motherhoodchoiceawards.jpg',
-      platformLink: 'https://www.motherhood.com.my/motherhood-award-2025',
-      videoLink: 'https://youtu.be/4mkAcSU5GF4?si=H1N_85b9lL77eXla'
-    },
-    { 
-      name: 'Nuren.asia', 
-      desc: 'A dynamic lifestyle platform for Gen Z and young women, offering brands a gateway to the next generation of female consumers.',
-      image: '/nuren21.jpg',
-      platformLink: 'https://nuren.asia/',
-    },
-    { 
-      name: 'Motherhood SuperApp', 
-      desc: 'A data-driven mobile companion that keeps your brand at the fingertips of modern parents throughout their daily parenting journey.',
-      image: '/MotherhoodSuperapp.png',
-      platformLink: 'https://m.motherhood.com.my/',
-    },
-    { 
-      name: 'Motherhood AI (MAI)', 
-      desc: 'An intelligent AI-powered parenting companion providing personalized guidance, health tracking, and instant expert support for modern families.',
-      image: '/MAI.png',
-      platformLink: 'https://m.motherhood.com.my/',
-      videoLink: 'https://youtu.be/i0p--rmPeAM?si=ykThmaNNb2zga4h0'
-    },
-    { 
-      name: 'Superkids', 
-      desc: "An interactive development hub where children's brands can engage families through creative content and educational activities.",
-      image: '/superkids.png',
-      platformLink: 'https://m.motherhood.com.my/superkid-infopage',
-    },
-    { 
-      name: 'New Mom Program', 
-      desc: 'A targeted loyalty ecosystem that allows brands to build long-term relationships with parents from the very start of their journey.',
-      image: '/newmom.png',
-      platformLink: 'https://www.motherhood.com.my/newmom-program',
-    },
-    { 
-      name: 'Money Smart Mama', 
-      desc: 'Empowering women with financial confidence, this program offers a unique space for financial and household brands to support family prosperity.',
-      image: '/moneysmartmama.jpg',
-      videoLink: 'https://youtu.be/-BTyNleKKyQ?si=sF491bwXBVOI0Ye0'
-    },
-    { 
-      name: 'MamaCubaTry', 
-      desc: 'The ultimate sampling and social review engine, enabling brands to generate authentic feedback, UGC, and massive share of voice.',
-      image: '/mamacubatry.jpg',
-      platformLink: 'https://m.motherhood.com.my/mamacubatry-product',
-    },
-    { 
-      name: 'Creator Food Network', 
-      desc: 'A specialized culinary community connecting food and kitchen brands with passionate home cooks and family-focused food creators.',
-      image: '/Creatorfoodnetwork.jpg',
-      platformLink: 'https://www.tiktok.com/@creatorfoodnetwork',
-    },
-    { 
-      name: 'School Outreach Program', 
-      desc: 'An organized school tour program featuring curated workshops and sampling activations, creating an educational, enriching, and fun learning experience for children while offering brands direct engagement in a trusted school environment.',
-      image: '/schooloutreach.png',
-      platformLink: 'https://www.motherhood.com.my/',
-    }
-  ];
+const products = [
+  { 
+    name: 'Motherhood.com.my', 
+    desc: "Malaysia's #1 parenting marketplace and community, offering brands direct access to a high-intent audience of millions of parents.",
+    image: '/motherhood.jpg',
+    platformLink: 'https://home.motherhood.com.my/',
+  },
+  { 
+    name: 'Kelabmama', 
+    desc: 'A premium content ecosystem where brands can integrate into trusted narratives, reaching a loyal community of engaged mothers.',
+    image: '/Kelabmama.png',
+    platformLink: 'https://kelabmama.com',
+  },
+  { 
+    name: 'Ibuencer.com', 
+    desc: "The region's largest mom-influencer network, driving authentic brand advocacy and high-impact social commerce through 10,000+ creators.",
+    image: '/ibuencer.png',
+    platformLink: 'https://www.ibuencer.com/',
+    videoLink: 'https://youtu.be/5JZt0qRkPsQ?si=9qvCEB4hZ2Hv4vOQ'
+  },
+  { 
+    name: 'Parentcraft', 
+    desc: 'A specialized educational platform for brands to establish thought leadership and provide value-added skills to new and expecting parents.',
+    image: '/parentcraft.png',
+    platformLink: 'https://www.motherhood.com.my/event/parentcraft-class',
+    videoLink: 'https://youtu.be/bJjLpYrekNs'
+  },
+  { 
+    name: 'Ask Me Doctor', 
+    desc: 'A high-trust medical advice platform where healthcare and wellness brands can connect with families through expert-led content.',
+    image: '/askmeDoctor.jpg',
+    platformLink: 'https://home.motherhood.com.my/',
+    videoLink: 'https://youtu.be/PquKkf4wM14?si=1uFO1G2aR2T9e_1F'
+  },
+  { 
+    name: 'Motherhood Choice Award', 
+    desc: "The gold standard of parenting excellence, providing brands with the ultimate seal of approval from Malaysia's largest voting community.",
+    image: '/motherhoodchoiceawards.jpg',
+    platformLink: 'https://www.motherhood.com.my/motherhood-award-2025',
+    videoLink: 'https://youtu.be/4mkAcSU5GF4?si=H1N_85b9lL77eXla'
+  },
+  { 
+    name: 'Nuren.asia', 
+    desc: 'A dynamic lifestyle platform for Gen Z and young women, offering brands a gateway to the next generation of female consumers.',
+    image: '/nuren21.jpg',
+    platformLink: 'https://nuren.asia/',
+  },
+  { 
+    name: 'Motherhood SuperApp', 
+    desc: 'A data-driven mobile companion that keeps your brand at the fingertips of modern parents throughout their daily parenting journey.',
+    image: '/MotherhoodSuperapp.png',
+    platformLink: 'https://m.motherhood.com.my/',
+  },
+  { 
+    name: 'Motherhood AI (MAI)', 
+    desc: 'An intelligent AI-powered parenting companion providing personalized guidance, health tracking, and instant expert support for modern families.',
+    image: '/MAI.png',
+    platformLink: 'https://m.motherhood.com.my/',
+    videoLink: 'https://youtu.be/i0p--rmPeAM?si=ykThmaNNb2zga4h0'
+  },
+  { 
+    name: 'Superkids', 
+    desc: "An interactive development hub where children's brands can engage families through creative content and educational activities.",
+    image: '/superkids.png',
+    platformLink: 'https://m.motherhood.com.my/superkid-infopage',
+  },
+  { 
+    name: 'New Mom Program', 
+    desc: 'A targeted loyalty ecosystem that allows brands to build long-term relationships with parents from the very start of their journey.',
+    image: '/newmom.png',
+    platformLink: 'https://www.motherhood.com.my/newmom-program',
+  },
+  { 
+    name: 'Money Smart Mama', 
+    desc: 'Empowering women with financial confidence, this program offers a unique space for financial and household brands to support family prosperity.',
+    image: '/moneysmartmama.jpg',
+    videoLink: 'https://youtu.be/-BTyNleKKyQ?si=sF491bwXBVOI0Ye0'
+  },
+  { 
+    name: 'MamaCubaTry', 
+    desc: 'The ultimate sampling and social review engine, enabling brands to generate authentic feedback, UGC, and massive share of voice.',
+    image: '/mamacubatry.jpg',
+    platformLink: 'https://m.motherhood.com.my/mamacubatry-product',
+  },
+  { 
+    name: 'Creator Food Network', 
+    desc: 'A specialized culinary community connecting food and kitchen brands with passionate home cooks and family-focused food creators.',
+    image: '/Creatorfoodnetwork.jpg',
+    platformLink: 'https://www.tiktok.com/@creatorfoodnetwork',
+  },
+  { 
+    name: 'School Outreach Program', 
+    desc: 'An organized school tour program featuring curated workshops and sampling activations, creating an educational, enriching, and fun learning experience for children while offering brands direct engagement in a trusted school environment.',
+    image: '/schooloutreach.png',
+    platformLink: 'https://www.motherhood.com.my/',
+  }
+];
+
+const Products = ({ showAll = false }: { showAll?: boolean }) => {
+  const [activeVideo, setActiveVideo] = useState<string | null>(null);
+  const displayProducts = showAll ? products : products.slice(0, 4);
 
   return (
     <section id="products" className="py-24">
@@ -608,7 +649,7 @@ const Products = () => {
         </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {products.map((product, idx) => (
+          {displayProducts.map((product, idx) => (
             <motion.div 
               key={idx}
               whileHover={{ y: -10 }}
@@ -663,6 +704,18 @@ const Products = () => {
             </motion.div>
           ))}
         </div>
+
+        {!showAll && (
+          <div className="mt-16 text-center">
+            <Link 
+              to="/products" 
+              className="inline-flex items-center gap-2 bg-slate-900 text-white px-10 py-4 rounded-full font-bold text-lg hover:bg-slate-800 transition-all shadow-xl"
+            >
+              More Offerings
+              <ArrowRight size={20} />
+            </Link>
+          </div>
+        )}
       </div>
 
       <VideoModal 
@@ -986,6 +1039,16 @@ const BrandSolutions = ({ onContactClick }: { onContactClick: () => void }) => {
       icon: <Heart className="text-pink-600" />
     },
     { 
+      title: 'Social Media Content Management', 
+      desc: 'From ideation to development and community management.',
+      icon: <Megaphone className="text-rose-500" />
+    },
+    { 
+      title: 'Content Sponsorship', 
+      desc: 'Strategic article and video production coupled with multi-channel marketing to amplify your brand voice.',
+      icon: <Newspaper className="text-cyan-600" />
+    },
+    { 
       title: 'Data-driven Targeting', 
       desc: 'Leverage our deep consumer insights for higher ROI and precise retargeting.',
       icon: <BarChart3 className="text-purple-600" />
@@ -1060,6 +1123,110 @@ const BrandSolutions = ({ onContactClick }: { onContactClick: () => void }) => {
               </motion.div>
             ))}
           </div>
+        </div>
+      </div>
+    </section>
+  );
+};
+
+const ClientLogos = () => {
+  const [activeTab, setActiveTab] = useState('Baby & Kids');
+
+  const pillars = [
+    { id: 'Baby & Kids', label: 'Baby & Kids' },
+    { id: 'Families & Services', label: 'Families & Services' },
+    { id: 'Health & Lifestyle', label: 'Health & Lifestyle' }
+  ];
+
+  const logos: Record<string, string[]> = {
+    'Baby & Kids': [
+      'Anmum.png', 'Applecrumby.png', 'BB Step 3.png', 'Baby Buds.png', 'Baby Carrie.jpg',
+      'babyshop.png', 'Bellamy.png', 'Cetaphil.png', 'Drypers.png', 'Enfagrow.jpg',
+      'Farm Fresh.jpg', 'Friso.png', 'Genki.png', 'Hoppi.png', 'Huggies.png',
+      'Lifebuoy.png', 'Mamypoko.jpg', 'Nappikleen.png', 'Nestle.png', 'Nivea Baby.png',
+      'Pet Pet.jpg', 'Philips Avent.png', 'Pigeon.png', 'QV Baby.png', 'Similac.png',
+      'Wyeth Nutrition.png'
+    ],
+    'Families & Services': [
+      'Mydin.png', 'Sunway.png', 'Tesco.png', 'Magiclean.jpg', 'KPJ.png', 'download.png',
+      'Pantai Hospital.jpg', 'AIA.png', 'Prudential.png', 'Manulife.png',
+      'cryocord.png', 'LYC.png', 'IPC.png', 'Eye Level.png', 'Ibis.png',
+      'Maybank.png', 'BSN.png', 'I Can Read.png', 'Columbia Asia.png',
+      'Gleneagles.png', 'Ecoworld.png', 'Alpha IVF.png', 'Mr DIY.png', 'CItibank.png',
+      'Grab.png', 'Sealy.png', 'Zurich.png', 'Touch and go.png', 'Sunlight.png', 'SK Magic.png', 
+      'Biore.png', 'Uniqlo.png', 'Spritzer.png', 'samsung.png', 'Ajinomoto.png', 'Bega.png', 
+      'Farmers Union.png', 'Jantzen.png', 'HP.png', 'Philips.png', 'Canon.png', 'Sony.png', 
+      'ziplock.jpg', 'Melvita.jpg', 'Panasonic.png', 'LG.png'
+    ],
+    'Health & Lifestyle': [
+      'Scotts.jpg', 'Bio oil.png', 'Clearblue.png', 'Zenso-1.png', 'Brands.jpg', 'Vsoy.png', 
+      'Tanamera.jpg', 'Bepenthen.jpg', 'wardah.png', 'blackmores.png', 'Pharmaniaga.png', 
+      'Nutox.png', 'Nivea.png', 'Biotherm.png', 'Klorane.png', 'Avene.png'
+    ]
+  };
+
+  return (
+    <section className="py-24 bg-white border-y border-slate-100 overflow-hidden">
+      <div className="text-center px-6">
+        <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">Trusted by Industry Leaders</h2>
+        <p className="text-slate-500 mb-12 max-w-2xl mx-auto">
+          Partnering with over 5,000 brands to drive growth through community-first strategies.
+        </p>
+
+        <div className="flex flex-wrap justify-center gap-2 mb-16">
+          {pillars.map(pillar => (
+            <button
+              key={pillar.id}
+              onClick={() => setActiveTab(pillar.id)}
+              className={`px-8 py-3 rounded-full font-bold transition-all text-sm tracking-wide ${
+                activeTab === pillar.id 
+                  ? 'bg-nuren-pink text-white shadow-lg shadow-nuren-pink/20' 
+                  : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
+              }`}
+            >
+              {pillar.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="relative">
+        {/* Gradients for fading edges */}
+        <div className="absolute inset-y-0 left-0 w-32 bg-gradient-to-r from-white to-transparent z-10 pointer-events-none" />
+        <div className="absolute inset-y-0 right-0 w-32 bg-gradient-to-l from-white to-transparent z-10 pointer-events-none" />
+
+        <div className="flex select-none">
+          {logos[activeTab].length > 0 ? (
+            <motion.div 
+              key={activeTab}
+              initial={{ x: 0 }}
+              animate={{ x: "-50%" }}
+              transition={{
+                duration: 40,
+                repeat: Infinity,
+                ease: "linear",
+              }}
+              className="flex gap-8 whitespace-nowrap"
+            >
+              {[...logos[activeTab], ...logos[activeTab]].map((logo, idx) => (
+                <div 
+                  key={`${logo}-${idx}`}
+                  className="flex items-center justify-center p-8 bg-white border border-slate-50 rounded-3xl h-32 w-56 hover:shadow-xl hover:shadow-slate-200/50 hover:border-nuren-pink/20 transition-all duration-300 shrink-0"
+                >
+                  <img 
+                    src={`/${logo}`} 
+                    alt={logo.split('.')[0]} 
+                    className="max-h-full max-w-full object-contain transition-all duration-500"
+                    referrerPolicy="no-referrer"
+                  />
+                </div>
+              ))}
+            </motion.div>
+          ) : (
+            <div className="w-full py-12 text-center text-slate-300 font-medium italic">
+              Coming soon - Expanding our ecosystem.
+            </div>
+          )}
         </div>
       </div>
     </section>
@@ -1256,7 +1423,7 @@ const Footer = () => {
 
 // --- Media Hub Page ---
 
-const MediaHubPage = () => {
+const MediaHubPage = ({ onContactClick }: { onContactClick: () => void }) => {
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
@@ -1271,18 +1438,18 @@ const MediaHubPage = () => {
       source: "BFM 89.9"
     },
     { 
-      title: "Nuren Group champions women's empowerment in the digital trade", 
-      date: 'September 2024', 
-      category: 'Media',
-      link: 'https://themalaysianreserve.com/2024/09/24/nuren-group-champions-womens-empowerment-in-the-digital-trade-through-innovative-platforms/',
-      source: "The Malaysian Reserve"
-    },
-    { 
       title: "Enlinea Sdn Bhd celebrates triumph at AOTY & MARKies Awards 2024", 
       date: 'May 2024', 
       category: 'Awards',
       link: 'https://www.marketing-interactive.com/enlinea-sdn-bhd-celebrates-triumph-at-aoty-markies-awards-2024',
       source: "Marketing Interactive"
+    },
+    { 
+      title: "Nuren Group champions women's empowerment in the digital trade", 
+      date: 'September 2024', 
+      category: 'Media',
+      link: 'https://themalaysianreserve.com/2024/09/24/nuren-group-champions-womens-empowerment-in-the-digital-trade-through-innovative-platforms/',
+      source: "The Malaysian Reserve"
     },
     { 
       title: "Nuren Group: A Case Study on Digital Transformation", 
@@ -1309,10 +1476,12 @@ const MediaHubPage = () => {
 
   return (
     <div className="pt-20">
-      <Helmet>
-        <title>Media Hub | Nuren Group - News, Insights & Press</title>
-        <meta name="description" content="Stay updated with the latest news, press releases, and media coverage from Nuren Group, Southeast Asia's leading parenting ecosystem." />
-      </Helmet>
+      <SEO 
+        title="Media Hub | Nuren Group - News, Insights & Press"
+        description="Stay updated with the latest news, press releases, and media coverage from Nuren Group, Southeast Asia's leading parenting ecosystem."
+        keywords="Nuren Group news, media hub, press releases, parenting tech insights, Southeast Asia digital media"
+        canonical="https://nurengroup.com/media-hub"
+      />
 
       {/* Hero Section */}
       <section className="py-24 bg-slate-50">
@@ -1396,13 +1565,24 @@ const MediaHubPage = () => {
           <p className="text-slate-400 text-lg mb-10 leading-relaxed">
             For press releases, media kits, or interview requests, please reach out to our communications team.
           </p>
-          <a 
-            href="mailto:pr@nurengroup.com" 
-            className="inline-flex items-center gap-2 bg-nuren-pink text-white px-10 py-4 rounded-full font-bold text-lg hover:bg-nuren-pink/90 transition-all shadow-lg shadow-nuren-pink/20"
-          >
-            Contact Press Team
-            <ArrowRight size={20} />
-          </a>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <button 
+              onClick={onContactClick}
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-nuren-pink text-white px-10 py-4 rounded-full font-bold text-lg hover:bg-nuren-pink/90 transition-all shadow-lg shadow-nuren-pink/20"
+            >
+              Contact Press Team
+              <ArrowRight size={20} />
+            </button>
+            <a 
+              href="https://wa.me/60124238768"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white text-slate-900 px-10 py-4 rounded-full font-bold text-lg hover:bg-slate-100 transition-all shadow-lg"
+            >
+              Media Inquiries
+              <ExternalLink size={20} />
+            </a>
+          </div>
         </div>
       </section>
     </div>
@@ -1451,10 +1631,12 @@ const BoardOfDirectorsPage = () => {
 
   return (
     <div className="pt-20">
-      <Helmet>
-        <title>Board of Directors | Nuren Group - Leadership & Governance</title>
-        <meta name="description" content="Meet the Board of Directors of Nuren Group, providing strategic oversight and guidance for Southeast Asia's leading digital family ecosystem." />
-      </Helmet>
+      <SEO 
+        title="Board of Directors | Nuren Group - Leadership & Governance"
+        description="Meet the Board of Directors of Nuren Group, providing strategic oversight and guidance for Southeast Asia's leading digital family ecosystem."
+        keywords="Nuren Group board, leadership, corporate governance, Petrina Goh, Kelvin Leow, Prof Dr Wong"
+        canonical="https://nurengroup.com/board-of-directors"
+      />
 
       {/* Hero Section */}
       <section className="py-24 bg-slate-900 text-white overflow-hidden relative">
@@ -1609,10 +1791,12 @@ const CorporateGovernancePage = () => {
 
   return (
     <div className="pt-20">
-      <Helmet>
-        <title>Corporate Governance | Nuren Group - Ethics & Transparency</title>
-        <meta name="description" content="Learn about Nuren Group's commitment to corporate governance, ethical business practices, and transparency." />
-      </Helmet>
+      <SEO 
+        title="Corporate Governance | Nuren Group - Ethics & Transparency"
+        description="Learn about Nuren Group's commitment to corporate governance, ethical business practices, and transparency."
+        keywords="corporate governance, business ethics, transparency, Nuren Group policies"
+        canonical="https://nurengroup.com/investors/corporate-governance"
+      />
 
       {/* Hero Section */}
       <section className="py-24 bg-slate-900 text-white overflow-hidden relative">
@@ -1775,9 +1959,12 @@ const GovernanceDocumentsPage = () => {
 
   return (
     <div className="pt-20">
-      <Helmet>
-        <title>Governance Documents | Nuren Group</title>
-      </Helmet>
+      <SEO 
+        title={`${selectedDoc.title} | Governance Documents | Nuren Group`}
+        description={`Read the ${selectedDoc.title} and other governance documents of Nuren Group.`}
+        keywords={`governance documents, ${selectedDoc.title}, Nuren Group policies`}
+        canonical={`https://nurengroup.com/investors/governance-documents/${selectedDoc.id}`}
+      />
 
       <section className="py-16 bg-slate-50 border-b border-slate-200">
         <div className="max-w-7xl mx-auto px-6">
@@ -1872,10 +2059,12 @@ const InvestorsPage = () => {
 
   return (
     <div className="pt-20">
-      <Helmet>
-        <title>Investors | Nuren Group - Investor Relations & Governance</title>
-        <meta name="description" content="Access key information about Nuren Group's performance, governance, and market announcements for our investor community." />
-      </Helmet>
+      <SEO 
+        title="Investors | Nuren Group - Investor Relations & Governance"
+        description="Access key information about Nuren Group's performance, governance, and market announcements for our investor community."
+        keywords="investor relations, Nuren Group stock, financial performance, market announcements"
+        canonical="https://nurengroup.com/investors"
+      />
 
       {/* Hero Section */}
       <section className="py-24 bg-slate-50">
@@ -1996,10 +2185,12 @@ const CareersPage = () => {
 
   return (
     <div className="pt-20">
-      <Helmet>
-        <title>Careers | Nuren Group - Join Our Mission</title>
-        <meta name="description" content="Join Nuren Group and help us build Southeast Asia's leading community-powered commerce platform for women and families." />
-      </Helmet>
+      <SEO 
+        title="Careers | Nuren Group - Join Our Mission"
+        description="Join Nuren Group and help us build Southeast Asia's leading community-powered commerce platform for women and families."
+        keywords="Nuren Group careers, jobs in Malaysia, tech jobs SEA, join Nuren Group"
+        canonical="https://nurengroup.com/careers"
+      />
 
       {/* Hero Section */}
       <section className="py-24 bg-slate-50">
@@ -2104,10 +2295,10 @@ const CareersPage = () => {
           <div className="mt-16 text-center">
             <p className="text-slate-400 mb-8">Don't see a role that fits? We're always looking for talent. Send your CV to us!</p>
             <a 
-              href="mailto:hi@nurengroup.com" 
+              href="mailto:admin@nurengroup.com" 
               className="inline-flex items-center gap-2 bg-nuren-pink text-white px-10 py-4 rounded-full font-bold text-lg hover:bg-nuren-pink/90 transition-all shadow-lg shadow-nuren-pink/20"
             >
-              Email CV to hi@nurengroup.com
+              Email CV to admin@nurengroup.com
               <ArrowRight size={20} />
             </a>
           </div>
@@ -2171,21 +2362,12 @@ const EcosystemPage = ({ onContactClick }: { onContactClick: () => void }) => {
 
   return (
     <div className="pt-24 pb-20">
-      <Helmet>
-        <title>Nuren Group Ecosystem - Empowering Families through Digital Innovation</title>
-        <meta name="description" content="Discover Nuren Group's comprehensive ecosystem of digital products, from Motherhood SuperApp to Ibuencer, supporting families and empowering women across SE Asia." />
-        <meta name="keywords" content="Nuren Group ecosystem, parenting platforms, Motherhood SuperApp, Ibuencer network, Kelabmama, digital family support SE Asia" />
-        <link rel="canonical" href="https://nurengroup.com/ecosystem" />
-        <meta property="og:title" content="Nuren Group Ecosystem - Empowering Families through Digital Innovation" />
-        <meta property="og:description" content="Discover Nuren Group's comprehensive ecosystem of digital products, from Motherhood SuperApp to Ibuencer, supporting families and empowering women across SE Asia." />
-        <meta property="og:image" content="https://nurengroup.com/NurenGroup.jpg" />
-        <meta property="og:url" content="https://nurengroup.com/ecosystem" />
-        <meta property="og:type" content="website" />
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="Nuren Group Ecosystem - Empowering Families through Digital Innovation" />
-        <meta name="twitter:description" content="Discover Nuren Group's comprehensive ecosystem of digital products, from Motherhood SuperApp to Ibuencer, supporting families and empowering women across SE Asia." />
-        <meta name="twitter:image" content="https://nurengroup.com/NurenGroup.jpg" />
-      </Helmet>
+      <SEO 
+        title="Nuren Group Ecosystem - Empowering Families through Digital Innovation"
+        description="Discover Nuren Group's comprehensive ecosystem of digital products, from Motherhood SuperApp to Ibuencer, supporting families and empowering women across SE Asia."
+        keywords="Nuren Group ecosystem, parenting platforms, Motherhood SuperApp, Ibuencer network, Kelabmama, digital family support SE Asia"
+        canonical="https://nurengroup.com/ecosystem"
+      />
       {/* Hero */}
       <section className="py-20 bg-slate-50 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-1/2 h-full opacity-10 pointer-events-none">
@@ -2391,31 +2573,43 @@ const EcosystemPage = ({ onContactClick }: { onContactClick: () => void }) => {
   );
 };
 
+// --- Products Page ---
+
+const ProductsPage = () => {
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
+  return (
+    <div className="pt-20">
+      <SEO 
+        title="Our Products & Platforms | Nuren Group"
+        description="Explore Nuren Group's diverse ecosystem of digital products designed to support families and empower women across Southeast Asia."
+        keywords="parenting platforms, Motherhood.com.my, Kelabmama, Ibuencer, digital products, family ecosystem"
+        canonical="https://nurengroup.com/products"
+      />
+      <Products showAll={true} />
+    </div>
+  );
+};
+
 // --- Home Component ---
 
 const Home = ({ onContactClick }: { onContactClick: () => void }) => {
   return (
     <>
-      <Helmet>
-        <title>Nuren Group - Southeast Asia's Leading Community-Powered Commerce Platform</title>
-        <meta name="description" content="Nuren Group is a community-driven digital ecosystem connecting brands with highly engaged audiences through trusted platforms, data, and technology in SE Asia." />
-        <meta name="keywords" content="Nuren Group, community-powered commerce, parenting ecosystem, Southeast Asia, Motherhood SuperApp, Ibuencer, Kelabmama" />
-        <link rel="canonical" href="https://nurengroup.com/" />
-        <meta property="og:title" content="Nuren Group - Southeast Asia's Leading Community-Powered Commerce Platform" />
-        <meta property="og:description" content="Nuren Group is a community-driven digital ecosystem connecting brands with highly engaged audiences through trusted platforms, data, and technology in SE Asia." />
-        <meta property="og:image" content="https://nurengroup.com/NurenGroup.jpg" />
-        <meta property="og:url" content="https://nurengroup.com/" />
-        <meta property="og:type" content="website" />
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="Nuren Group - Southeast Asia's Leading Community-Powered Commerce Platform" />
-        <meta name="twitter:description" content="Nuren Group is a community-driven digital ecosystem connecting brands with highly engaged audiences through trusted platforms, data, and technology in SE Asia." />
-        <meta name="twitter:image" content="https://nurengroup.com/NurenGroup.jpg" />
-      </Helmet>
+      <SEO 
+        title="Nuren Group - Southeast Asia's Leading Community-Powered Commerce Platform"
+        description="Nuren Group is a community-driven digital ecosystem connecting brands with highly engaged audiences through trusted platforms, data, and technology in SE Asia."
+        keywords="Nuren Group, community-powered commerce, parenting ecosystem, Southeast Asia, Motherhood SuperApp, Ibuencer, Kelabmama, digital family ecosystem, women empowerment"
+        canonical="https://nurengroup.com/"
+      />
       <Hero />
       <Stats />
       <QuickLinks />
       <Products />
       <BrandSolutions onContactClick={onContactClick} />
+      <ClientLogos />
       <CaseStudies />
       <Newsroom />
       <VisionSection />
@@ -2459,8 +2653,9 @@ export default function App() {
             <Routes>
               <Route path="/" element={<Home onContactClick={() => setIsContactModalOpen(true)} />} />
               <Route path="/ecosystem" element={<EcosystemPage onContactClick={() => setIsContactModalOpen(true)} />} />
+              <Route path="/products" element={<ProductsPage />} />
               <Route path="/investors" element={<InvestorsPage />} />
-              <Route path="/media-hub" element={<MediaHubPage />} />
+              <Route path="/media-hub" element={<MediaHubPage onContactClick={() => setIsContactModalOpen(true)} />} />
               <Route path="/investors/corporate-governance" element={<CorporateGovernancePage />} />
               <Route path="/investors/governance-documents" element={<GovernanceDocumentsPage />} />
               <Route path="/investors/governance-documents/:docId" element={<GovernanceDocumentsPage />} />
