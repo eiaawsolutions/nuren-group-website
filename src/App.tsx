@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { BrowserRouter, Routes, Route, Link, useLocation, useParams } from 'react-router-dom';
 import { Helmet, HelmetProvider } from 'react-helmet-async';
 import { governanceDocs } from './data/governanceDocs';
+import { Chatbot } from './components/Chatbot/Chatbot';
 import { 
   Users, 
   Store, 
@@ -2672,10 +2673,12 @@ export default function App() {
 
           <Footer />
 
-          <ContactModal 
-            isOpen={isContactModalOpen} 
-            onClose={() => setIsContactModalOpen(false)} 
+          <ContactModal
+            isOpen={isContactModalOpen}
+            onClose={() => setIsContactModalOpen(false)}
           />
+
+          <Chatbot />
         </div>
       </BrowserRouter>
     </HelmetProvider>
