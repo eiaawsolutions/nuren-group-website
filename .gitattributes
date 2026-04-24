@@ -1,0 +1,19 @@
+# Treat image, font, and other binary assets as binary so git never applies
+# text/EOL normalization. Without this, Windows checkouts can corrupt JPEG/PNG
+# bytes (any byte > 0x7F gets replaced with the UTF-8 replacement character).
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.webp binary
+*.ico  binary
+*.svg  binary
+*.pdf  binary
+*.woff  binary
+*.woff2 binary
+*.ttf   binary
+*.otf   binary
+*.eot   binary
+*.mp4   binary
+*.webm  binary
+*.zip   binary
