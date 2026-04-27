@@ -23,8 +23,8 @@ const SUGGESTED_PROMPTS = [
   'How can brands partner with you?',
 ];
 
-const CHAT_ENDPOINT = '/.netlify/functions/chat';
-const ENQUIRY_ENDPOINT = '/.netlify/functions/enquiry';
+const CHAT_ENDPOINT = '/api/chat';
+const ENQUIRY_ENDPOINT = '/api/enquiry';
 
 interface FormState {
   name: string;
