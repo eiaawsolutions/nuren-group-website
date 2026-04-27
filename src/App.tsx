@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route, Link, useLocation, useParams } from 'reac
 import { Helmet, HelmetProvider } from 'react-helmet-async';
 import { governanceDocs } from './data/governanceDocs';
 import { Chatbot } from './components/Chatbot/Chatbot';
+import { AdminPage } from './components/Admin/AdminPage';
 import { 
   Users, 
   Store, 
@@ -2653,33 +2654,41 @@ export default function App() {
   return (
     <HelmetProvider>
       <BrowserRouter>
-        <div className="min-h-screen bg-white">
-          <Navbar onContactClick={() => setIsContactModalOpen(true)} />
-          
-          <main>
-            <Routes>
-              <Route path="/" element={<Home onContactClick={() => setIsContactModalOpen(true)} />} />
-              <Route path="/ecosystem" element={<EcosystemPage onContactClick={() => setIsContactModalOpen(true)} />} />
-              <Route path="/products" element={<ProductsPage />} />
-              <Route path="/investors" element={<InvestorsPage />} />
-              <Route path="/media-hub" element={<MediaHubPage onContactClick={() => setIsContactModalOpen(true)} />} />
-              <Route path="/investors/corporate-governance" element={<CorporateGovernancePage />} />
-              <Route path="/investors/governance-documents" element={<GovernanceDocumentsPage />} />
-              <Route path="/investors/governance-documents/:docId" element={<GovernanceDocumentsPage />} />
-              <Route path="/board-of-directors" element={<BoardOfDirectorsPage />} />
-              <Route path="/careers" element={<CareersPage />} />
-            </Routes>
-          </main>
+        <Routes>
+          <Route path="/admin" element={<AdminPage />} />
+          <Route
+            path="*"
+            element={
+              <div className="min-h-screen bg-white">
+                <Navbar onContactClick={() => setIsContactModalOpen(true)} />
 
-          <Footer />
+                <main>
+                  <Routes>
+                    <Route path="/" element={<Home onContactClick={() => setIsContactModalOpen(true)} />} />
+                    <Route path="/ecosystem" element={<EcosystemPage onContactClick={() => setIsContactModalOpen(true)} />} />
+                    <Route path="/products" element={<ProductsPage />} />
+                    <Route path="/investors" element={<InvestorsPage />} />
+                    <Route path="/media-hub" element={<MediaHubPage onContactClick={() => setIsContactModalOpen(true)} />} />
+                    <Route path="/investors/corporate-governance" element={<CorporateGovernancePage />} />
+                    <Route path="/investors/governance-documents" element={<GovernanceDocumentsPage />} />
+                    <Route path="/investors/governance-documents/:docId" element={<GovernanceDocumentsPage />} />
+                    <Route path="/board-of-directors" element={<BoardOfDirectorsPage />} />
+                    <Route path="/careers" element={<CareersPage />} />
+                  </Routes>
+                </main>
 
-          <ContactModal
-            isOpen={isContactModalOpen}
-            onClose={() => setIsContactModalOpen(false)}
+                <Footer />
+
+                <ContactModal
+                  isOpen={isContactModalOpen}
+                  onClose={() => setIsContactModalOpen(false)}
+                />
+
+                <Chatbot />
+              </div>
+            }
           />
-
-          <Chatbot />
-        </div>
+        </Routes>
       </BrowserRouter>
     </HelmetProvider>
   );

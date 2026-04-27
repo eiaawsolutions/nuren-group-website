@@ -6,6 +6,10 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT) || 3000;
 const DIST_DIR = path.join(__dirname, 'dist');
 
+const ENQUIRY_RECIPIENT = process.env.ENQUIRY_RECIPIENT || 'petrina.goh@nurengroup.com';
+const ENQUIRY_FROM_EMAIL = process.env.ENQUIRY_FROM_EMAIL || 'Nuren Group Website <onboarding@resend.dev>';
+const ENQUIRY_SUBJECT_PREFIX = 'Nuren Group Website Enquiry';
+
 const NUREN_KNOWLEDGE = `
 # NUREN GROUP — OFFICIAL WEBSITE KNOWLEDGE BASE
 
@@ -85,12 +89,27 @@ const CHAT_RATE_WINDOW_MS = 60_000;
 const CHAT_RATE_MAX = 20;
 const ENQUIRY_RATE_WINDOW_MS = 60 * 60 * 1000;
 const ENQUIRY_RATE_MAX = 5;
+const ADMIN_RATE_WINDOW_MS = 60_000;
+const ADMIN_RATE_MAX = 10;
 
-const ENQUIRY_RECIPIENT = 'petrina.goh@nurengroup.com';
-const ENQUIRY_SUBJECT_PREFIX = 'Nuren Group Website Enquiry';
+const RING_BUFFER_SIZE = 50;
 
 const chatRateLimit = new Map();
 const enquiryRateLimit = new Map();
+const adminRateLimit = new Map();
+
+const enquiryLog = [];
+const errorLog = [];
+
+function pushRing(buffer, item) {
+  buffer.unshift(item);
+  if (buffer.length > RING_BUFFER_SIZE) buffer.length = RING_BUFFER_SIZE;
+}
+
+function logError(scope, detail) {
+  pushRing(errorLog, { ts: new Date().toISOString(), scope, detail: String(detail).slice(0, 500) });
+  console.error(`[${scope}]`, detail);
+}
 
 function checkRateLimit(store, key, windowMs, max) {
   const now = Date.now();
@@ -123,6 +142,63 @@ function isEmail(value) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
+function isPlaceholder(value) {
+  if (!value) return true;
+  return value === 'set-me-in-dashboard' || value === 'MY_GEMINI_API_KEY';
+}
+
+function maskSecret(value) {
+  if (!value) return '';
+  if (isPlaceholder(value)) return value;
+  if (value.length <= 8) return '*'.repeat(value.length);
+  return `${'*'.repeat(value.length - 4)}${value.slice(-4)}`;
+}
+
+function timingSafeEqual(a, b) {
+  if (a.length !== b.length) return false;
+  let result = 0;
+  for (let i = 0; i < a.length; i += 1) {
+    result |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return result === 0;
+}
+
+function adminAuth(req, res, next) {
+  const ip = clientIp(req);
+  if (!checkRateLimit(adminRateLimit, ip, ADMIN_RATE_WINDOW_MS, ADMIN_RATE_MAX)) {
+    return res.status(429).json({ error: 'Too many admin requests.' });
+  }
+
+  const expected = process.env.SUPERADMIN_PASSWORD;
+  if (!expected || isPlaceholder(expected)) {
+    return res.status(503).json({ error: 'Admin access not configured. Set SUPERADMIN_PASSWORD in Railway.' });
+  }
+
+  const header = req.headers.authorization || '';
+  if (!header.startsWith('Basic ')) {
+    res.set('WWW-Authenticate', 'Basic realm="Nuren Admin", charset="UTF-8"');
+    return res.status(401).json({ error: 'Authentication required.' });
+  }
+
+  let decoded = '';
+  try {
+    decoded = Buffer.from(header.slice(6), 'base64').toString('utf8');
+  } catch {
+    res.set('WWW-Authenticate', 'Basic realm="Nuren Admin", charset="UTF-8"');
+    return res.status(401).json({ error: 'Invalid authentication.' });
+  }
+
+  const sep = decoded.indexOf(':');
+  const supplied = sep === -1 ? decoded : decoded.slice(sep + 1);
+
+  if (!timingSafeEqual(supplied, expected)) {
+    res.set('WWW-Authenticate', 'Basic realm="Nuren Admin", charset="UTF-8"');
+    return res.status(401).json({ error: 'Invalid credentials.' });
+  }
+
+  next();
+}
+
 const app = express();
 app.set('trust proxy', true);
 app.use(express.json({ limit: '64kb' }));
@@ -138,7 +214,7 @@ app.post('/api/chat', async (req, res) => {
   }
 
   const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey || apiKey === 'set-me-in-dashboard' || apiKey === 'MY_GEMINI_API_KEY') {
+  if (isPlaceholder(apiKey)) {
     return res.status(500).json({ error: 'Chat service is not configured.' });
   }
 
@@ -177,7 +253,7 @@ app.post('/api/chat', async (req, res) => {
 
     if (!upstream.ok) {
       const detail = await upstream.text();
-      console.error('Gemini error', upstream.status, detail);
+      logError('chat:gemini', `${upstream.status} ${detail}`);
       return res.status(502).json({ error: 'Upstream chat service error.' });
     }
 
@@ -190,7 +266,7 @@ app.post('/api/chat', async (req, res) => {
     }
     return res.json({ reply });
   } catch (err) {
-    console.error('Chat handler error', err);
+    logError('chat:exception', err?.message || err);
     return res.status(500).json({ error: 'Something went wrong. Please try again.' });
   }
 });
@@ -203,7 +279,6 @@ app.post('/api/enquiry', async (req, res) => {
 
   const payload = req.body && typeof req.body === 'object' ? req.body : {};
 
-  // Honeypot — real users leave this empty; bots fill it.
   if (typeof payload.website === 'string' && payload.website.trim() !== '') {
     return res.json({ ok: true });
   }
@@ -226,10 +301,27 @@ app.post('/api/enquiry', async (req, res) => {
     return res.status(400).json({ error: 'Validation failed.', errors });
   }
 
-  const subject = `${ENQUIRY_SUBJECT_PREFIX}: ${topic}`;
-  const submittedAt = new Date().toISOString();
-  const userAgent = String(req.headers['user-agent'] || 'unknown');
+  const result = await deliverEnquiry({
+    name, email, phone, topic, description, ip,
+    userAgent: String(req.headers['user-agent'] || 'unknown'),
+    submittedAt: new Date().toISOString(),
+  });
 
+  pushRing(enquiryLog, {
+    ts: result.submittedAt,
+    name, email, phone, topic,
+    description: description.slice(0, 200),
+    delivery: result.delivery,
+  });
+
+  if (result.error) {
+    return res.status(result.status || 502).json({ error: result.error });
+  }
+  return res.json({ ok: true, delivery: result.delivery });
+});
+
+async function deliverEnquiry({ name, email, phone, topic, description, ip, userAgent, submittedAt }) {
+  const subject = `${ENQUIRY_SUBJECT_PREFIX}: ${topic}`;
   const textBody = [
     'A new enquiry was submitted via the Nuren Group website chatbot.',
     '',
@@ -269,23 +361,18 @@ app.post('/api/enquiry', async (req, res) => {
   `;
 
   const resendKey = process.env.RESEND_API_KEY;
-  const fromAddress = process.env.ENQUIRY_FROM_EMAIL || 'Nuren Group Website <onboarding@resend.dev>';
-
-  if (!resendKey || resendKey === 'set-me-in-dashboard') {
+  if (isPlaceholder(resendKey)) {
     console.warn('[enquiry] RESEND_API_KEY not set — logging enquiry instead of emailing.');
     console.log('[enquiry:pending-email]', JSON.stringify({ to: ENQUIRY_RECIPIENT, subject, textBody }));
-    return res.json({ ok: true, delivery: 'logged' });
+    return { delivery: 'logged', submittedAt };
   }
 
   try {
     const upstream = await fetch('https://api.resend.com/emails', {
       method: 'POST',
-      headers: {
-        Authorization: `Bearer ${resendKey}`,
-        'Content-Type': 'application/json',
-      },
+      headers: { Authorization: `Bearer ${resendKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        from: fromAddress,
+        from: ENQUIRY_FROM_EMAIL,
         to: [ENQUIRY_RECIPIENT],
         reply_to: email,
         subject,
@@ -296,14 +383,86 @@ app.post('/api/enquiry', async (req, res) => {
 
     if (!upstream.ok) {
       const detail = await upstream.text();
-      console.error('Resend error', upstream.status, detail);
-      return res.status(502).json({ error: 'Could not deliver enquiry. Please try again or email us directly.' });
+      logError('enquiry:resend', `${upstream.status} ${detail}`);
+      return { error: 'Could not deliver enquiry. Please try again or email us directly.', status: 502, delivery: 'failed', submittedAt };
     }
-    return res.json({ ok: true, delivery: 'sent' });
+    return { delivery: 'sent', submittedAt };
   } catch (err) {
-    console.error('Enquiry handler error', err);
-    return res.status(500).json({ error: 'Something went wrong. Please try again.' });
+    logError('enquiry:exception', err?.message || err);
+    return { error: 'Something went wrong. Please try again.', status: 500, delivery: 'failed', submittedAt };
   }
+}
+
+// Admin API — all guarded by Basic Auth.
+app.get('/admin/api/status', adminAuth, (_req, res) => {
+  const gemini = process.env.GEMINI_API_KEY;
+  const resend = process.env.RESEND_API_KEY;
+
+  res.json({
+    settings: {
+      geminiKey: { set: !isPlaceholder(gemini), masked: maskSecret(gemini || '') },
+      resendKey: { set: !isPlaceholder(resend), masked: maskSecret(resend || '') },
+      enquiryFromEmail: ENQUIRY_FROM_EMAIL,
+      enquiryRecipient: ENQUIRY_RECIPIENT,
+      chatModel: CHAT_MODEL,
+    },
+    knowledgeBase: NUREN_KNOWLEDGE,
+    counts: { enquiries: enquiryLog.length, errors: errorLog.length },
+  });
+});
+
+app.get('/admin/api/enquiries', adminAuth, (_req, res) => {
+  res.json({ enquiries: enquiryLog });
+});
+
+app.get('/admin/api/errors', adminAuth, (_req, res) => {
+  res.json({ errors: errorLog });
+});
+
+app.post('/admin/api/test-gemini', adminAuth, async (_req, res) => {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (isPlaceholder(apiKey)) {
+    return res.status(400).json({ ok: false, error: 'GEMINI_API_KEY not configured.' });
+  }
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${CHAT_MODEL}:generateContent?key=${apiKey}`;
+  try {
+    const start = Date.now();
+    const upstream = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ role: 'user', parts: [{ text: 'Reply with the single word: OK' }] }],
+        generationConfig: { maxOutputTokens: 5, temperature: 0 },
+      }),
+    });
+    const ms = Date.now() - start;
+
+    if (!upstream.ok) {
+      const detail = await upstream.text();
+      return res.status(502).json({ ok: false, status: upstream.status, error: detail.slice(0, 300), latencyMs: ms });
+    }
+    const data = await upstream.json();
+    const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+    return res.json({ ok: true, reply, latencyMs: ms });
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: err?.message || String(err) });
+  }
+});
+
+app.post('/admin/api/test-enquiry', adminAuth, async (_req, res) => {
+  const result = await deliverEnquiry({
+    name: 'Admin Test',
+    email: 'admin-test@nurengroup.com',
+    phone: '+60-000-0000',
+    topic: 'Admin test enquiry',
+    description: 'This is a test enquiry triggered from the /admin page to verify Resend delivery.',
+    ip: 'admin-page',
+    userAgent: 'admin-test',
+    submittedAt: new Date().toISOString(),
+  });
+  if (result.error) return res.status(result.status || 502).json({ ok: false, error: result.error, delivery: result.delivery });
+  return res.json({ ok: true, delivery: result.delivery });
 });
 
 app.use(express.static(DIST_DIR, { index: false, maxAge: '1h' }));
