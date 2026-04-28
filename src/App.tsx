@@ -237,43 +237,75 @@ const ContactModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => voi
   );
 };
 
-const SEO = ({ title, description, keywords, canonical, ogImage }: { 
-  title: string, 
-  description: string, 
-  keywords?: string, 
+type Breadcrumb = { name: string; url: string };
+
+const SITE_URL = 'https://nurengroup.com';
+// TODO: replace with a 1200x630 brand-card OG image. Logo is acceptable
+// fallback — most platforms will crop/letterbox to fit.
+const DEFAULT_OG = `${SITE_URL}/NurenGroup.jpg`;
+
+const SEO = ({ title, description, keywords, canonical, ogImage, breadcrumbs }: {
+  title: string,
+  description: string,
+  keywords?: string,
   canonical?: string,
-  ogImage?: string
-}) => (
-  <Helmet>
-    <title>{title}</title>
-    <meta name="description" content={description} />
-    {keywords && <meta name="keywords" content={keywords} />}
-    <link rel="canonical" href={canonical || "https://nurengroup.com/"} />
-    
-    {/* Geo Tags */}
-    <meta name="geo.region" content="MY-10" />
-    <meta name="geo.placename" content="Kuala Lumpur" />
-    <meta name="geo.position" content="3.1390;101.6869" />
-    <meta name="ICBM" content="3.1390, 101.6869" />
-    
-    {/* Distribution and Rating */}
-    <meta name="distribution" content="global" />
-    <meta name="rating" content="general" />
-    
-    {/* Open Graph */}
-    <meta property="og:title" content={title} />
-    <meta property="og:description" content={description} />
-    <meta property="og:image" content={ogImage || "https://nurengroup.com/NurenGroup.jpg"} />
-    <meta property="og:url" content={window.location.href} />
-    <meta property="og:type" content="website" />
-    
-    {/* Twitter */}
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content={title} />
-    <meta name="twitter:description" content={description} />
-    <meta name="twitter:image" content={ogImage || "https://nurengroup.com/NurenGroup.jpg"} />
-  </Helmet>
-);
+  ogImage?: string,
+  breadcrumbs?: Breadcrumb[],
+}) => {
+  const canonicalUrl = canonical || `${SITE_URL}/`;
+  const image = ogImage || DEFAULT_OG;
+
+  // BreadcrumbList JSON-LD — Google shows breadcrumbs in the SERP snippet
+  // and AI search engines use it to understand site hierarchy.
+  const breadcrumbLd = breadcrumbs && breadcrumbs.length > 0 ? {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: breadcrumbs.map((b, i) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      name: b.name,
+      item: b.url.startsWith('http') ? b.url : `${SITE_URL}${b.url}`,
+    })),
+  } : null;
+
+  return (
+    <Helmet>
+      <title>{title}</title>
+      <meta name="description" content={description} />
+      {keywords && <meta name="keywords" content={keywords} />}
+      <link rel="canonical" href={canonicalUrl} />
+
+      {/* Geo */}
+      <meta name="geo.region" content="MY-10" />
+      <meta name="geo.placename" content="Kuala Lumpur" />
+      <meta name="geo.position" content="3.1390;101.6869" />
+      <meta name="ICBM" content="3.1390, 101.6869" />
+
+      {/* Distribution */}
+      <meta name="distribution" content="global" />
+      <meta name="rating" content="general" />
+
+      {/* Open Graph */}
+      <meta property="og:title" content={title} />
+      <meta property="og:description" content={description} />
+      <meta property="og:image" content={image} />
+      <meta property="og:url" content={canonicalUrl} />
+      <meta property="og:type" content="website" />
+      <meta property="og:site_name" content="Nuren Group" />
+      <meta property="og:locale" content="en_MY" />
+
+      {/* Twitter */}
+      <meta name="twitter:card" content="summary_large_image" />
+      <meta name="twitter:title" content={title} />
+      <meta name="twitter:description" content={description} />
+      <meta name="twitter:image" content={image} />
+
+      {breadcrumbLd && (
+        <script type="application/ld+json">{JSON.stringify(breadcrumbLd)}</script>
+      )}
+    </Helmet>
+  );
+};
 
 const Navbar = ({ onContactClick }: { onContactClick: () => void }) => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -289,7 +321,7 @@ const Navbar = ({ onContactClick }: { onContactClick: () => void }) => {
   const navLinks = [
     { name: 'Home', href: '/' },
     { name: 'Ecosystem', href: '/ecosystem' },
-    { name: 'Products', href: '/#products' },
+    { name: 'Products', href: '/products' },
     { name: 'For Brands', href: '/#brands' },
     { name: 'Investors', href: '/investors' },
     { name: 'Careers', href: '/careers' },
@@ -1484,11 +1516,15 @@ const MediaHubPage = ({ onContactClick }: { onContactClick: () => void }) => {
 
   return (
     <div className="pt-20">
-      <SEO 
+      <SEO
         title="Media Hub | Nuren Group - News, Insights & Press"
         description="Stay updated with the latest news, press releases, and media coverage from Nuren Group, Southeast Asia's leading parenting ecosystem."
         keywords="Nuren Group news, media hub, press releases, parenting tech insights, Southeast Asia digital media"
         canonical="https://nurengroup.com/media-hub"
+        breadcrumbs={[
+          { name: 'Home', url: '/' },
+          { name: 'Media Hub', url: '/media-hub' },
+        ]}
       />
 
       {/* Hero Section */}
@@ -1639,11 +1675,15 @@ const BoardOfDirectorsPage = () => {
 
   return (
     <div className="pt-20">
-      <SEO 
+      <SEO
         title="Board of Directors | Nuren Group - Leadership & Governance"
         description="Meet the Board of Directors of Nuren Group, providing strategic oversight and guidance for Southeast Asia's leading digital family ecosystem."
         keywords="Nuren Group board, leadership, corporate governance, Petrina Goh, Kelvin Leow, Prof Dr Wong"
         canonical="https://nurengroup.com/board-of-directors"
+        breadcrumbs={[
+          { name: 'Home', url: '/' },
+          { name: 'Board of Directors', url: '/board-of-directors' },
+        ]}
       />
 
       {/* Hero Section */}
@@ -1799,11 +1839,16 @@ const CorporateGovernancePage = () => {
 
   return (
     <div className="pt-20">
-      <SEO 
+      <SEO
         title="Corporate Governance | Nuren Group - Ethics & Transparency"
         description="Learn about Nuren Group's commitment to corporate governance, ethical business practices, and transparency."
         keywords="corporate governance, business ethics, transparency, Nuren Group policies"
         canonical="https://nurengroup.com/investors/corporate-governance"
+        breadcrumbs={[
+          { name: 'Home', url: '/' },
+          { name: 'Investors', url: '/investors' },
+          { name: 'Corporate Governance', url: '/investors/corporate-governance' },
+        ]}
       />
 
       {/* Hero Section */}
@@ -1967,11 +2012,17 @@ const GovernanceDocumentsPage = () => {
 
   return (
     <div className="pt-20">
-      <SEO 
+      <SEO
         title={`${selectedDoc.title} | Governance Documents | Nuren Group`}
         description={`Read the ${selectedDoc.title} and other governance documents of Nuren Group.`}
         keywords={`governance documents, ${selectedDoc.title}, Nuren Group policies`}
         canonical={`https://nurengroup.com/investors/governance-documents/${selectedDoc.id}`}
+        breadcrumbs={[
+          { name: 'Home', url: '/' },
+          { name: 'Investors', url: '/investors' },
+          { name: 'Governance Documents', url: '/investors/governance-documents' },
+          { name: selectedDoc.title, url: `/investors/governance-documents/${selectedDoc.id}` },
+        ]}
       />
 
       <section className="py-16 bg-slate-50 border-b border-slate-200">
@@ -2067,11 +2118,15 @@ const InvestorsPage = () => {
 
   return (
     <div className="pt-20">
-      <SEO 
+      <SEO
         title="Investors | Nuren Group - Investor Relations & Governance"
         description="Access key information about Nuren Group's performance, governance, and market announcements for our investor community."
         keywords="investor relations, Nuren Group stock, financial performance, market announcements"
         canonical="https://nurengroup.com/investors"
+        breadcrumbs={[
+          { name: 'Home', url: '/' },
+          { name: 'Investors', url: '/investors' },
+        ]}
       />
 
       {/* Hero Section */}
@@ -2193,11 +2248,15 @@ const CareersPage = () => {
 
   return (
     <div className="pt-20">
-      <SEO 
+      <SEO
         title="Careers | Nuren Group - Join Our Mission"
         description="Join Nuren Group and help us build Southeast Asia's leading community-powered commerce platform for women and families."
         keywords="Nuren Group careers, jobs in Malaysia, tech jobs SEA, join Nuren Group"
         canonical="https://nurengroup.com/careers"
+        breadcrumbs={[
+          { name: 'Home', url: '/' },
+          { name: 'Careers', url: '/careers' },
+        ]}
       />
 
       {/* Hero Section */}
@@ -2370,11 +2429,15 @@ const EcosystemPage = ({ onContactClick }: { onContactClick: () => void }) => {
 
   return (
     <div className="pt-24 pb-20">
-      <SEO 
+      <SEO
         title="Nuren Group Ecosystem - Empowering Families through Digital Innovation"
         description="Discover Nuren Group's comprehensive ecosystem of digital products, from Motherhood SuperApp to Ibuencer, supporting families and empowering women across SE Asia."
         keywords="Nuren Group ecosystem, parenting platforms, Motherhood SuperApp, Ibuencer network, Kelabmama, digital family support SE Asia"
         canonical="https://nurengroup.com/ecosystem"
+        breadcrumbs={[
+          { name: 'Home', url: '/' },
+          { name: 'Ecosystem', url: '/ecosystem' },
+        ]}
       />
       {/* Hero */}
       <section className="py-20 bg-slate-50 relative overflow-hidden">
@@ -2590,11 +2653,15 @@ const ProductsPage = () => {
 
   return (
     <div className="pt-20">
-      <SEO 
+      <SEO
         title="Our Products & Platforms | Nuren Group"
         description="Explore Nuren Group's diverse ecosystem of digital products designed to support families and empower women across Southeast Asia."
         keywords="parenting platforms, Motherhood.com.my, Kelabmama, Ibuencer, digital products, family ecosystem"
         canonical="https://nurengroup.com/products"
+        breadcrumbs={[
+          { name: 'Home', url: '/' },
+          { name: 'Products', url: '/products' },
+        ]}
       />
       <Products showAll={true} />
     </div>
