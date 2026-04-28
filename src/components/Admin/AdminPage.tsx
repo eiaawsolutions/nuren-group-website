@@ -3,7 +3,7 @@ import { Helmet } from 'react-helmet-async';
 
 interface Status {
   settings: {
-    geminiKey: { set: boolean; masked: string };
+    anthropicKey: { set: boolean; masked: string };
     resendKey: { set: boolean; masked: string };
     enquiryFromEmail: string;
     enquiryRecipient: string;
@@ -45,7 +45,7 @@ export function AdminPage() {
   const [enquiries, setEnquiries] = useState<EnquiryEntry[]>([]);
   const [errors, setErrors] = useState<ErrorEntry[]>([]);
   const [tab, setTab] = useState<'overview' | 'kb' | 'enquiries' | 'errors'>('overview');
-  const [testGeminiResult, setTestGeminiResult] = useState<string>('');
+  const [testAnthropicResult, setTestAnthropicResult] = useState<string>('');
   const [testEnquiryResult, setTestEnquiryResult] = useState<string>('');
   const [refreshing, setRefreshing] = useState(false);
 
@@ -94,17 +94,17 @@ export function AdminPage() {
     }
   }
 
-  async function testGemini() {
-    setTestGeminiResult('Testing…');
-    const res = await fetch('/admin/api/test-gemini', {
+  async function testAnthropic() {
+    setTestAnthropicResult('Testing…');
+    const res = await fetch('/admin/api/test-anthropic', {
       method: 'POST',
       headers: { Authorization: authHeader(password) },
     });
     const data = await res.json();
     if (data.ok) {
-      setTestGeminiResult(`OK — replied "${data.reply}" in ${data.latencyMs}ms`);
+      setTestAnthropicResult(`OK — replied "${data.reply}" in ${data.latencyMs}ms`);
     } else {
-      setTestGeminiResult(`FAIL — ${data.error || `HTTP ${data.status || res.status}`}`);
+      setTestAnthropicResult(`FAIL — ${data.error || `HTTP ${data.status || res.status}`}`);
     }
   }
 
@@ -213,9 +213,9 @@ export function AdminPage() {
           <div className="space-y-6">
             <section className="grid sm:grid-cols-2 gap-4">
               <SettingRow
-                label="Gemini API key"
-                value={status.settings.geminiKey.masked || '— not set —'}
-                ok={status.settings.geminiKey.set}
+                label="Anthropic API key"
+                value={status.settings.anthropicKey.masked || '— not set —'}
+                ok={status.settings.anthropicKey.set}
               />
               <SettingRow
                 label="Resend API key"
@@ -232,12 +232,12 @@ export function AdminPage() {
               <h2 className="text-base font-semibold mb-4">Connection tests</h2>
               <div className="grid sm:grid-cols-2 gap-4">
                 <div>
-                  <button onClick={testGemini} className="w-full rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 px-4 py-2 text-sm">
-                    Ping Gemini
+                  <button onClick={testAnthropic} className="w-full rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 px-4 py-2 text-sm">
+                    Ping Anthropic
                   </button>
-                  {testGeminiResult && (
-                    <p className={`mt-2 text-xs ${testGeminiResult.startsWith('OK') ? 'text-emerald-400' : testGeminiResult.startsWith('FAIL') ? 'text-rose-400' : 'text-slate-400'}`}>
-                      {testGeminiResult}
+                  {testAnthropicResult && (
+                    <p className={`mt-2 text-xs ${testAnthropicResult.startsWith('OK') ? 'text-emerald-400' : testAnthropicResult.startsWith('FAIL') ? 'text-rose-400' : 'text-slate-400'}`}>
+                      {testAnthropicResult}
                     </p>
                   )}
                 </div>

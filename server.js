@@ -1,6 +1,7 @@
 import express from 'express';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import Anthropic from '@anthropic-ai/sdk';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT) || 3000;
@@ -83,7 +84,9 @@ scope, politely say so and offer to connect them with the team via the enquiry f
 
 const MAX_MESSAGE_LENGTH = 1000;
 const MAX_HISTORY = 12;
-const CHAT_MODEL = 'gemini-2.5-flash';
+const CHAT_MODEL = 'claude-haiku-4-5-20251001';
+const CHAT_MAX_TOKENS = 400;
+const CHAT_TIMEOUT_MS = 30_000;
 
 const CHAT_RATE_WINDOW_MS = 60_000;
 const CHAT_RATE_MAX = 20;
@@ -144,7 +147,7 @@ function isEmail(value) {
 
 function isPlaceholder(value) {
   if (!value) return true;
-  return value === 'set-me-in-dashboard' || value === 'MY_GEMINI_API_KEY';
+  return value === 'set-me-in-dashboard' || value === 'MY_GEMINI_API_KEY' || value === 'MY_ANTHROPIC_API_KEY';
 }
 
 function maskSecret(value) {
@@ -207,14 +210,33 @@ app.get('/healthz', (_req, res) => {
   res.json({ ok: true });
 });
 
+function getAnthropicClient() {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (isPlaceholder(apiKey)) return null;
+  return new Anthropic({ apiKey, timeout: CHAT_TIMEOUT_MS });
+}
+
+// Frontend sends history with role: 'user' | 'model' (Gemini convention).
+// Anthropic expects role: 'user' | 'assistant'. Map at the boundary.
+function toAnthropicMessages(rawHistory, currentMessage) {
+  const mapped = (Array.isArray(rawHistory) ? rawHistory.slice(-MAX_HISTORY) : [])
+    .filter((m) => m && typeof m.text === 'string' && (m.role === 'user' || m.role === 'model'))
+    .map((m) => ({
+      role: m.role === 'model' ? 'assistant' : 'user',
+      content: m.text.slice(0, MAX_MESSAGE_LENGTH),
+    }));
+  mapped.push({ role: 'user', content: currentMessage });
+  return mapped;
+}
+
 app.post('/api/chat', async (req, res) => {
   const ip = clientIp(req);
   if (!checkRateLimit(chatRateLimit, ip, CHAT_RATE_WINDOW_MS, CHAT_RATE_MAX)) {
     return res.status(429).json({ error: 'Too many requests. Please try again in a moment.' });
   }
 
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (isPlaceholder(apiKey)) {
+  const client = getAnthropicClient();
+  if (!client) {
     return res.status(500).json({ error: 'Chat service is not configured.' });
   }
 
@@ -224,41 +246,23 @@ app.post('/api/chat', async (req, res) => {
     return res.status(400).json({ error: `Message too long (max ${MAX_MESSAGE_LENGTH} characters).` });
   }
 
-  const rawHistory = Array.isArray(req.body?.history) ? req.body.history.slice(-MAX_HISTORY) : [];
-  const contents = [
-    ...rawHistory
-      .filter((m) => m && typeof m.text === 'string' && (m.role === 'user' || m.role === 'model'))
-      .map((m) => ({ role: m.role, parts: [{ text: m.text.slice(0, MAX_MESSAGE_LENGTH) }] })),
-    { role: 'user', parts: [{ text: message }] },
-  ];
-
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${CHAT_MODEL}:generateContent?key=${apiKey}`;
+  const messages = toAnthropicMessages(req.body?.history, message);
 
   try {
-    const upstream = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: NUREN_KNOWLEDGE }] },
-        contents,
-        generationConfig: { temperature: 0.4, maxOutputTokens: 400, topP: 0.9 },
-        safetySettings: [
-          { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-          { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-          { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-          { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-        ],
-      }),
+    const response = await client.messages.create({
+      model: CHAT_MODEL,
+      max_tokens: CHAT_MAX_TOKENS,
+      temperature: 0.4,
+      system: NUREN_KNOWLEDGE,
+      messages,
     });
 
-    if (!upstream.ok) {
-      const detail = await upstream.text();
-      logError('chat:gemini', `${upstream.status} ${detail}`);
-      return res.status(502).json({ error: 'Upstream chat service error.' });
-    }
+    const reply = response.content
+      ?.filter((block) => block.type === 'text')
+      ?.map((block) => block.text)
+      ?.join('\n')
+      ?.trim();
 
-    const data = await upstream.json();
-    const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
     if (!reply) {
       return res.json({
         reply: "I'm not sure about that. If you'd like, tap Talk to our team and we'll get back to you.",
@@ -266,7 +270,12 @@ app.post('/api/chat', async (req, res) => {
     }
     return res.json({ reply });
   } catch (err) {
-    logError('chat:exception', err?.message || err);
+    const status = err?.status || err?.statusCode;
+    const detail = err?.message || String(err);
+    logError('chat:anthropic', status ? `${status} ${detail}` : detail);
+    if (status && status >= 400 && status < 500) {
+      return res.status(502).json({ error: 'Upstream chat service error.' });
+    }
     return res.status(500).json({ error: 'Something went wrong. Please try again.' });
   }
 });
@@ -395,12 +404,12 @@ async function deliverEnquiry({ name, email, phone, topic, description, ip, user
 
 // Admin API — all guarded by Basic Auth.
 app.get('/admin/api/status', adminAuth, (_req, res) => {
-  const gemini = process.env.GEMINI_API_KEY;
+  const anthropic = process.env.ANTHROPIC_API_KEY;
   const resend = process.env.RESEND_API_KEY;
 
   res.json({
     settings: {
-      geminiKey: { set: !isPlaceholder(gemini), masked: maskSecret(gemini || '') },
+      anthropicKey: { set: !isPlaceholder(anthropic), masked: maskSecret(anthropic || '') },
       resendKey: { set: !isPlaceholder(resend), masked: maskSecret(resend || '') },
       enquiryFromEmail: ENQUIRY_FROM_EMAIL,
       enquiryRecipient: ENQUIRY_RECIPIENT,
@@ -419,34 +428,33 @@ app.get('/admin/api/errors', adminAuth, (_req, res) => {
   res.json({ errors: errorLog });
 });
 
-app.post('/admin/api/test-gemini', adminAuth, async (_req, res) => {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (isPlaceholder(apiKey)) {
-    return res.status(400).json({ ok: false, error: 'GEMINI_API_KEY not configured.' });
+app.post('/admin/api/test-anthropic', adminAuth, async (_req, res) => {
+  const client = getAnthropicClient();
+  if (!client) {
+    return res.status(400).json({ ok: false, error: 'ANTHROPIC_API_KEY not configured.' });
   }
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${CHAT_MODEL}:generateContent?key=${apiKey}`;
   try {
     const start = Date.now();
-    const upstream = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ role: 'user', parts: [{ text: 'Reply with the single word: OK' }] }],
-        generationConfig: { maxOutputTokens: 5, temperature: 0 },
-      }),
+    const response = await client.messages.create({
+      model: CHAT_MODEL,
+      max_tokens: 10,
+      temperature: 0,
+      messages: [{ role: 'user', content: 'Reply with the single word: OK' }],
     });
     const ms = Date.now() - start;
-
-    if (!upstream.ok) {
-      const detail = await upstream.text();
-      return res.status(502).json({ ok: false, status: upstream.status, error: detail.slice(0, 300), latencyMs: ms });
-    }
-    const data = await upstream.json();
-    const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+    const reply = response.content
+      ?.filter((b) => b.type === 'text')
+      ?.map((b) => b.text)
+      ?.join('')
+      ?.trim() || '';
     return res.json({ ok: true, reply, latencyMs: ms });
   } catch (err) {
-    return res.status(500).json({ ok: false, error: err?.message || String(err) });
+    const status = err?.status || err?.statusCode;
+    const detail = (err?.message || String(err)).slice(0, 300);
+    return res.status(status && status >= 400 && status < 500 ? 502 : 500).json({
+      ok: false, status, error: detail,
+    });
   }
 });
 
