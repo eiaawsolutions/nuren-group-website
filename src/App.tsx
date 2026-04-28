@@ -74,16 +74,18 @@ const VideoModal = ({ isOpen, onClose, videoUrl }: { isOpen: boolean, onClose: (
           className="relative w-full max-w-5xl aspect-video bg-black rounded-3xl overflow-hidden shadow-2xl"
           onClick={(e) => e.stopPropagation()}
         >
-          <button 
+          <button
             onClick={onClose}
+            aria-label="Close video"
             className="absolute top-6 right-6 z-10 bg-white/10 hover:bg-white/20 text-white p-3 rounded-full transition-colors backdrop-blur-md"
           >
             <X size={24} />
           </button>
-          <iframe 
+          <iframe
             src={getEmbedUrl(videoUrl)}
             className="w-full h-full"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            referrerPolicy="strict-origin-when-cross-origin"
             allowFullScreen
           ></iframe>
         </motion.div>
@@ -278,6 +280,12 @@ const SEO = ({ title, description, keywords, canonical, ogImage, breadcrumbs }: 
       <meta name="description" content={description} />
       {keywords && <meta name="keywords" content={keywords} />}
       <link rel="canonical" href={canonicalUrl} />
+
+      {/* hreflang — same English content serves MY (primary), SG, and the
+          x-default fallback. Add `th` once Thai-language content exists. */}
+      <link rel="alternate" hrefLang="en-MY" href={canonicalUrl} />
+      <link rel="alternate" hrefLang="en-SG" href={canonicalUrl} />
+      <link rel="alternate" hrefLang="x-default" href={canonicalUrl} />
 
       {/* Geo */}
       <meta name="geo.region" content="MY-10" />
@@ -478,10 +486,12 @@ const Hero = () => {
               className="relative z-10 rounded-3xl overflow-hidden shadow-2xl border-8 border-white group cursor-pointer aspect-video"
               onClick={() => setActiveVideo(videoUrl)}
             >
-              <img 
-                src={thumbnailUrl} 
-                alt="Nuren Group Featured Video" 
+              <img
+                src={thumbnailUrl}
+                alt="Nuren Group Featured Video"
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                loading="lazy"
+                decoding="async"
                 referrerPolicy="no-referrer"
               />
               <div className="absolute inset-0 bg-black/30 group-hover:bg-black/50 transition-colors flex items-center justify-center">
@@ -700,10 +710,12 @@ const Products = ({ showAll = false }: { showAll?: boolean }) => {
               className="group bg-white rounded-2xl md:rounded-3xl overflow-hidden border border-slate-100 shadow-sm hover:shadow-xl transition-all flex flex-col"
             >
               <div className="relative aspect-video md:h-56 overflow-hidden">
-                <img 
-                  src={product.image} 
-                  alt={product.name} 
+                <img
+                  src={product.image}
+                  alt={product.name}
                   className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                  loading="lazy"
+                  decoding="async"
                   referrerPolicy="no-referrer"
                 />
                 {product.videoLink && (
@@ -813,10 +825,12 @@ const CaseStudies = () => {
               className="group block"
             >
               <div className="relative aspect-[16/10] rounded-[32px] overflow-hidden mb-8 shadow-lg">
-                <img 
-                  src={item.image} 
-                  alt={item.title} 
+                <img
+                  src={item.image}
+                  alt={item.title}
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                  loading="lazy"
+                  decoding="async"
                   referrerPolicy="no-referrer"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-8">
@@ -1257,10 +1271,12 @@ const ClientLogos = () => {
                   key={`${logo}-${idx}`}
                   className="flex items-center justify-center p-8 bg-white border border-slate-50 rounded-3xl h-32 w-56 hover:shadow-xl hover:shadow-slate-200/50 hover:border-nuren-pink/20 transition-all duration-300 shrink-0"
                 >
-                  <img 
-                    src={`/${logo}`} 
-                    alt={logo.split('.')[0]} 
+                  <img
+                    src={`/${logo}`}
+                    alt={logo.split('.')[0]}
                     className="max-h-full max-w-full object-contain transition-all duration-500"
+                    loading="lazy"
+                    decoding="async"
                     referrerPolicy="no-referrer"
                   />
                 </div>
@@ -1738,10 +1754,12 @@ const BoardOfDirectorsPage = () => {
               >
                 <div className="w-full md:w-1/3">
                   <div className="relative aspect-[4/5] rounded-[40px] overflow-hidden shadow-2xl shadow-slate-200">
-                    <img 
-                      src={director.image} 
-                      alt={director.name} 
+                    <img
+                      src={director.image}
+                      alt={director.name}
                       className="w-full h-full object-cover"
+                      loading="lazy"
+                      decoding="async"
                       referrerPolicy="no-referrer"
                     />
                   </div>
@@ -1948,10 +1966,12 @@ const CorporateGovernancePage = () => {
             </div>
             <div className="relative">
               <div className="aspect-square rounded-[64px] overflow-hidden shadow-2xl">
-                <img 
-                  src="https://picsum.photos/seed/governance/800/800" 
-                  alt="Governance" 
+                <img
+                  src="https://picsum.photos/seed/governance/800/800"
+                  alt="Governance"
                   className="w-full h-full object-cover"
+                  loading="lazy"
+                  decoding="async"
                   referrerPolicy="no-referrer"
                 />
               </div>

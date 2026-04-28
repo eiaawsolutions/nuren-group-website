@@ -247,6 +247,9 @@ app.use(helmet({
   },
   hsts: { maxAge: 31_536_000, includeSubDomains: true, preload: false },
   crossOriginEmbedderPolicy: false,
+  // YouTube embeds need Referer to validate the origin. Helmet's default
+  // (no-referrer) strips it, causing Error 153.
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
 }));
 
 app.use(express.json({ limit: '64kb' }));
