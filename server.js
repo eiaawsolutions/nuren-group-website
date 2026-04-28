@@ -523,11 +523,27 @@ app.post('/admin/api/test-enquiry', adminAuth, async (_req, res) => {
   return res.json({ ok: true, delivery: result.delivery });
 });
 
-app.use(express.static(DIST_DIR, { index: false, maxAge: '1h' }));
+// `index: 'index.html'` so a request for `/investors` resolves to the
+// prerendered `dist/investors/index.html` automatically (build creates one
+// per route — see scripts/prerender.mjs). Hashed asset bundles get a long
+// cache; HTML stays at maxAge:0 so deploys propagate immediately.
+app.use(express.static(DIST_DIR, {
+  index: 'index.html',
+  maxAge: '1h',
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
+    } else if (/\/assets\/.+\.(js|css|woff2?)$/.test(filePath)) {
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    }
+  },
+}));
 
-// SPA fallback. Tag /admin and /api responses with X-Robots-Tag so search
-// engines won't index them even before the React app mounts and sets the
-// per-route noindex meta. Robots.txt also disallows these paths.
+// SPA fallback for unknown routes (dynamic params like
+// /investors/governance-documents/:docId — those have no per-route prerender
+// and fall back to the root client-rendered shell). Tag /admin and /api with
+// X-Robots-Tag noindex so search engines don't index admin shell or API URLs
+// even before the React app mounts.
 app.use((req, res) => {
   if (req.path.startsWith('/admin') || req.path.startsWith('/api')) {
     res.set('X-Robots-Tag', 'noindex, nofollow');
