@@ -44,8 +44,12 @@ const VideoModal = ({ isOpen, onClose, videoUrl }: { isOpen: boolean, onClose: (
 
   const getEmbedUrl = (url: string) => {
     if (url.includes('youtube.com') || url.includes('youtu.be')) {
-      const id = url.split('v=')[1]?.split('&')[0] || url.split('/').pop()?.split('?')[0];
-      return `https://www.youtube.com/embed/${id}?autoplay=1`;
+      const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/|v\/))([\w-]{11})/);
+      const id = match?.[1];
+      if (!id) return url;
+      const origin = typeof window !== 'undefined' ? encodeURIComponent(window.location.origin) : '';
+      const params = `autoplay=1&rel=0&playsinline=1&modestbranding=1${origin ? `&origin=${origin}` : ''}`;
+      return `https://www.youtube-nocookie.com/embed/${id}?${params}`;
     }
     if (url.includes('instagram.com')) {
       const id = url.split('/reel/')[1]?.split('/')[0] || url.split('/p/')[1]?.split('/')[0];
