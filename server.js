@@ -540,9 +540,11 @@ app.use(express.static(DIST_DIR, {
   index: 'index.html',
   maxAge: '1h',
   setHeaders: (res, filePath) => {
-    if (filePath.endsWith('.html')) {
+    // Normalise to forward-slash so this regex works on Windows builds too.
+    const norm = filePath.replace(/\\/g, '/');
+    if (norm.endsWith('.html')) {
       res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
-    } else if (/\/assets\/.+\.(js|css|woff2?)$/.test(filePath)) {
+    } else if (/\/assets\/.+\.(js|css|woff2?)$/.test(norm)) {
       res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
     }
   },

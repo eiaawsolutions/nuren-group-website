@@ -170,7 +170,7 @@ const ContactModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => voi
           <div className="p-8">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-2xl font-bold text-slate-900">Contact Us</h2>
-              <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition-colors">
+              <button onClick={onClose} aria-label="Close contact form" className="text-slate-400 hover:text-slate-600 transition-colors">
                 <X size={24} />
               </button>
             </div>
@@ -378,7 +378,12 @@ const Navbar = ({ onContactClick }: { onContactClick: () => void }) => {
         </div>
 
         {/* Mobile Toggle */}
-        <button className="md:hidden text-slate-900" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
+        <button
+          className="md:hidden text-slate-900"
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          aria-label={isMobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
+          aria-expanded={isMobileMenuOpen}
+        >
           {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
         </button>
       </div>
@@ -2751,9 +2756,17 @@ export default function App() {
             path="*"
             element={
               <div className="min-h-screen bg-white">
+                {/* Skip-to-content link for keyboard / screen-reader users.
+                    Visually hidden until focused (Tailwind sr-only + focus utilities). */}
+                <a
+                  href="#main-content"
+                  className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:bg-nuren-pink focus:text-white focus:px-4 focus:py-2 focus:rounded-lg focus:font-medium"
+                >
+                  Skip to main content
+                </a>
                 <Navbar onContactClick={() => setIsContactModalOpen(true)} />
 
-                <main>
+                <main id="main-content">
                   <Routes>
                     <Route path="/" element={<Home onContactClick={() => setIsContactModalOpen(true)} />} />
                     <Route path="/ecosystem" element={<EcosystemPage onContactClick={() => setIsContactModalOpen(true)} />} />
