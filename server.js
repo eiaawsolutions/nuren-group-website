@@ -234,6 +234,12 @@ app.use(helmet({
       imgSrc: ["'self'", 'data:', 'https:'],
       fontSrc: ["'self'", 'data:'],
       connectSrc: ["'self'"],
+      frameSrc: [
+        "'self'",
+        'https://www.youtube.com',
+        'https://www.youtube-nocookie.com',
+        'https://www.instagram.com',
+      ],
       frameAncestors: ["'none'"],
       baseUri: ["'self'"],
       formAction: ["'self'"],
