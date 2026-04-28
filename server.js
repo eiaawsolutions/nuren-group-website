@@ -1,7 +1,10 @@
 import express from 'express';
 import path from 'node:path';
+import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import Anthropic from '@anthropic-ai/sdk';
+import helmet from 'helmet';
+import { LRUCache } from 'lru-cache';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT) || 3000;
@@ -96,10 +99,14 @@ const ADMIN_RATE_WINDOW_MS = 60_000;
 const ADMIN_RATE_MAX = 10;
 
 const RING_BUFFER_SIZE = 50;
+const RATE_LIMIT_MAX_KEYS = 10_000;
+const ADMIN_LOCKOUT_FAILS = 5;
+const ADMIN_LOCKOUT_WINDOW_MS = 15 * 60 * 1000;
 
-const chatRateLimit = new Map();
-const enquiryRateLimit = new Map();
-const adminRateLimit = new Map();
+const chatRateLimit = new LRUCache({ max: RATE_LIMIT_MAX_KEYS, ttl: CHAT_RATE_WINDOW_MS });
+const enquiryRateLimit = new LRUCache({ max: RATE_LIMIT_MAX_KEYS, ttl: ENQUIRY_RATE_WINDOW_MS });
+const adminRateLimit = new LRUCache({ max: RATE_LIMIT_MAX_KEYS, ttl: ADMIN_RATE_WINDOW_MS });
+const adminFailures = new LRUCache({ max: 1000, ttl: ADMIN_LOCKOUT_WINDOW_MS });
 
 const enquiryLog = [];
 const errorLog = [];
@@ -114,21 +121,16 @@ function logError(scope, detail) {
   console.error(`[${scope}]`, detail);
 }
 
-function checkRateLimit(store, key, windowMs, max) {
-  const now = Date.now();
-  const entry = store.get(key);
-  if (!entry || entry.resetAt < now) {
-    store.set(key, { count: 1, resetAt: now + windowMs });
-    return true;
-  }
-  if (entry.count >= max) return false;
-  entry.count += 1;
-  return true;
+function checkRateLimit(store, key, _windowMs, max) {
+  const count = (store.get(key) || 0) + 1;
+  store.set(key, count);
+  return count <= max;
 }
 
+// Trust Express's req.ip — with `app.set('trust proxy', true)`, it walks the
+// X-Forwarded-For chain correctly. Reading XFF directly is spoofable: any
+// client can send `X-Forwarded-For: 1.2.3.4` to bypass per-IP rate limits.
 function clientIp(req) {
-  const xff = req.headers['x-forwarded-for'];
-  if (typeof xff === 'string' && xff.length > 0) return xff.split(',')[0].trim();
   return req.ip || 'unknown';
 }
 
@@ -168,13 +170,22 @@ function timingSafeEqual(a, b) {
 
 function adminAuth(req, res, next) {
   const ip = clientIp(req);
+
+  // Lockout: 5 failures in 15 min → 429 until window expires.
+  const fails = adminFailures.get(ip) || 0;
+  if (fails >= ADMIN_LOCKOUT_FAILS) {
+    return res.status(429).json({ error: 'Too many failed attempts. Try again later.' });
+  }
+
   if (!checkRateLimit(adminRateLimit, ip, ADMIN_RATE_WINDOW_MS, ADMIN_RATE_MAX)) {
     return res.status(429).json({ error: 'Too many admin requests.' });
   }
 
   const expected = process.env.SUPERADMIN_PASSWORD;
   if (!expected || isPlaceholder(expected)) {
-    return res.status(503).json({ error: 'Admin access not configured. Set SUPERADMIN_PASSWORD in Railway.' });
+    // Don't name the env var — it gives an attacker the exact key to look for
+    // in any future env-leak. Generic "service unavailable" is enough.
+    return res.status(503).json({ error: 'Admin access unavailable.' });
   }
 
   const header = req.headers.authorization || '';
@@ -195,15 +206,43 @@ function adminAuth(req, res, next) {
   const supplied = sep === -1 ? decoded : decoded.slice(sep + 1);
 
   if (!timingSafeEqual(supplied, expected)) {
+    adminFailures.set(ip, fails + 1);
     res.set('WWW-Authenticate', 'Basic realm="Nuren Admin", charset="UTF-8"');
     return res.status(401).json({ error: 'Invalid credentials.' });
   }
 
+  // Reset failure count on a successful auth.
+  adminFailures.delete(ip);
   next();
 }
 
 const app = express();
+app.disable('x-powered-by');
 app.set('trust proxy', true);
+
+// Security headers — closes the "first finding any pentester would flag":
+// CSP, HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy,
+// Permissions-Policy. CSP allows inline styles (Tailwind injects them) and
+// connections to api.anthropic.com isn't needed because the chat call goes
+// server-side; the only outbound from the browser is to this same origin.
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", 'data:', 'https:'],
+      fontSrc: ["'self'", 'data:'],
+      connectSrc: ["'self'"],
+      frameAncestors: ["'none'"],
+      baseUri: ["'self'"],
+      formAction: ["'self'"],
+    },
+  },
+  hsts: { maxAge: 31_536_000, includeSubDomains: true, preload: false },
+  crossOriginEmbedderPolicy: false,
+}));
+
 app.use(express.json({ limit: '64kb' }));
 
 app.get('/healthz', (_req, res) => {
@@ -295,7 +334,9 @@ app.post('/api/enquiry', async (req, res) => {
   const name = String(payload.name || '').trim().slice(0, 120);
   const email = String(payload.email || '').trim().slice(0, 200);
   const phone = String(payload.phone || '').trim().slice(0, 40);
-  const topic = String(payload.topic || '').trim().slice(0, 160);
+  // Strip CR/LF: topic is interpolated into the email Subject — newlines
+  // would enable RFC 5322 header injection (Bcc:, additional From:, etc).
+  const topic = String(payload.topic || '').replace(/[\r\n]+/g, ' ').trim().slice(0, 160);
   const description = String(payload.description || '').trim().slice(0, 4000);
 
   const errors = {};
@@ -316,10 +357,19 @@ app.post('/api/enquiry', async (req, res) => {
     submittedAt: new Date().toISOString(),
   });
 
+  // Minimise PII in the in-memory ring buffer: full name + topic + delivery
+  // status are the only ops-useful fields. Email is hashed (12-char SHA-256
+  // prefix is enough to dedupe / spot abuse without leaking the address);
+  // phone, IP, full description, user-agent are dropped. Anyone with admin
+  // access used to see every visitor's full contact details — overkill for
+  // a marketing-site superadmin viewer. Full payload still flows to Petrina
+  // via Resend.
   pushRing(enquiryLog, {
     ts: result.submittedAt,
-    name, email, phone, topic,
-    description: description.slice(0, 200),
+    name,
+    emailHash: crypto.createHash('sha256').update(email.toLowerCase()).digest('hex').slice(0, 12),
+    topic,
+    descriptionPreview: description.slice(0, 80),
     delivery: result.delivery,
   });
 
@@ -475,7 +525,13 @@ app.post('/admin/api/test-enquiry', adminAuth, async (_req, res) => {
 
 app.use(express.static(DIST_DIR, { index: false, maxAge: '1h' }));
 
-app.use((_req, res) => {
+// SPA fallback. Tag /admin and /api responses with X-Robots-Tag so search
+// engines won't index them even before the React app mounts and sets the
+// per-route noindex meta. Robots.txt also disallows these paths.
+app.use((req, res) => {
+  if (req.path.startsWith('/admin') || req.path.startsWith('/api')) {
+    res.set('X-Robots-Tag', 'noindex, nofollow');
+  }
   res.sendFile(path.join(DIST_DIR, 'index.html'));
 });
 

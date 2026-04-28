@@ -16,10 +16,9 @@ interface Status {
 interface EnquiryEntry {
   ts: string;
   name: string;
-  email: string;
-  phone: string;
+  emailHash: string;
   topic: string;
-  description: string;
+  descriptionPreview: string;
   delivery: string;
 }
 
@@ -289,22 +288,22 @@ export function AdminPage() {
         {tab === 'enquiries' && (
           <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
             {enquiries.length === 0 ? (
-              <div className="p-8 text-center text-slate-500 text-sm">No enquiries yet. The log holds the last 50 and resets on redeploy.</div>
+              <div className="p-8 text-center text-slate-500 text-sm">No enquiries yet. Last 50 only, resets on redeploy. Email is hashed; full enquiry goes to the configured recipient via Resend.</div>
             ) : (
               <ul className="divide-y divide-slate-800">
                 {enquiries.map((e, idx) => (
                   <li key={idx} className="p-5">
                     <div className="flex items-start justify-between gap-4">
                       <div>
-                        <div className="text-sm font-medium">{e.name} <span className="text-slate-500">·</span> <span className="text-slate-400">{e.email}</span></div>
-                        <div className="text-xs text-slate-500">{e.phone} · {new Date(e.ts).toLocaleString()}</div>
+                        <div className="text-sm font-medium">{e.name} <span className="text-slate-500">·</span> <span className="font-mono text-xs text-slate-500" title="SHA-256 prefix of email — full address went to Petrina via email">email#{e.emailHash}</span></div>
+                        <div className="text-xs text-slate-500">{new Date(e.ts).toLocaleString()}</div>
                       </div>
                       <span className={`text-xs px-2 py-1 rounded ${e.delivery === 'sent' ? 'bg-emerald-500/10 text-emerald-400' : e.delivery === 'logged' ? 'bg-amber-500/10 text-amber-400' : 'bg-rose-500/10 text-rose-400'}`}>
                         {e.delivery}
                       </span>
                     </div>
                     <div className="mt-2 text-sm text-slate-300"><strong className="text-slate-400">Topic:</strong> {e.topic}</div>
-                    <div className="mt-1 text-sm text-slate-400">{e.description}{e.description.length >= 200 && '…'}</div>
+                    <div className="mt-1 text-sm text-slate-400">{e.descriptionPreview}{e.descriptionPreview.length >= 80 && '…'}</div>
                   </li>
                 ))}
               </ul>
