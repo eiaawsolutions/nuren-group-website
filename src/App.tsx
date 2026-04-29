@@ -34,7 +34,9 @@ import {
   Layers,
   Network,
   Database,
-  Share2
+  Share2,
+  Mail,
+  MessageCircle
 } from 'lucide-react';
 
 // --- Components ---
@@ -1463,13 +1465,27 @@ const Footer = () => {
             <p className="text-slate-500 max-w-md mb-8 leading-relaxed">
               Leading community-driven digital ecosystem focused on empowering women, mothers, and families across Southeast Asia.
             </p>
-            <div className="flex gap-4">
-              {['Twitter', 'LinkedIn', 'Facebook', 'Instagram'].map(social => (
-                <a key={social} href="#" className="w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-nuren-pink hover:border-nuren-pink transition-all">
-                  <span className="sr-only">{social}</span>
-                  <Globe size={18} />
-                </a>
-              ))}
+            <div className="space-y-3">
+              <a
+                href="mailto:admin@nurengroup.com"
+                className="inline-flex items-center gap-3 text-slate-600 hover:text-nuren-pink transition-colors"
+              >
+                <span className="w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-400 group-hover:text-nuren-pink">
+                  <Mail size={18} />
+                </span>
+                <span>admin@nurengroup.com</span>
+              </a>
+              <a
+                href="https://wa.me/60124238768"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-3 text-slate-600 hover:text-nuren-pink transition-colors"
+              >
+                <span className="w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-400">
+                  <MessageCircle size={18} />
+                </span>
+                <span>WhatsApp: +60 12-423 8768</span>
+              </a>
             </div>
           </div>
 
