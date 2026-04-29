@@ -430,6 +430,65 @@ function toAnthropicMessages(rawHistory, currentMessage) {
   return mapped;
 }
 
+// Detect the language we should reply in. Haiku 4.5 has a stubborn English
+// default for marketing-context responses, so we don't trust the model to
+// follow the LANGUAGE rule in the system prompt — we hard-inject a directive.
+// Heuristics, in order: any Han character → zh; any BM-marker word → ms; else en.
+const HAN_RE = /[一-鿿㐀-䶿]/;
+const BM_MARKERS = [
+  // function words mums actually use in MY chat
+  'boleh', 'nak', 'tak', 'awak', 'macam', 'untuk', 'saya', 'kami', 'kita',
+  'dengan', 'dah', 'belum', 'ini', 'itu', 'ada', 'tiada', 'apa', 'siapa',
+  'bagaimana', 'kenapa', 'bila', 'tolong', 'terima kasih', 'minta',
+  'perlu', 'jangan', 'cuba', 'sila', 'baik', 'sangat', 'lah', 'ke',
+];
+const BM_RE = new RegExp(`\\b(${BM_MARKERS.join('|')})\\b`, 'i');
+
+function detectReplyLanguage(currentMessage, rawHistory) {
+  // Check the current message first (it's the most recent signal).
+  if (HAN_RE.test(currentMessage)) return 'zh';
+  if (BM_RE.test(currentMessage)) return 'ms';
+
+  // Fall back to the last 3 user turns from history — visitors often start
+  // in English and switch, but they also do the reverse.
+  const recentUserTurns = (Array.isArray(rawHistory) ? rawHistory : [])
+    .filter((m) => m?.role === 'user' && typeof m.text === 'string')
+    .slice(-3);
+  for (let i = recentUserTurns.length - 1; i >= 0; i -= 1) {
+    const t = recentUserTurns[i].text;
+    if (HAN_RE.test(t)) return 'zh';
+    if (BM_RE.test(t)) return 'ms';
+  }
+  return 'en';
+}
+
+function languageDirective(lang) {
+  if (lang === 'zh') {
+    return [
+      '',
+      '## ACTIVE LANGUAGE OVERRIDE',
+      'The visitor is writing in Mandarin. You MUST reply primarily in Simplified',
+      'Chinese (中文). Mix in English brand/industry terms naturally — KOL,',
+      'campaign, proposal, brief, Motherhood, Kelab Mama, Ibuencer, Ask Me Doctor,',
+      'Parentcraft, sampling, RM30K — do NOT translate those. Do NOT reply in',
+      'English. Do NOT ask which language to use. Just reply in Mandarin.',
+      '',
+      'Example tone: "明白的 👍 这个方向很对。以你 RM50K 的预算，我会建议..."',
+    ].join('\n');
+  }
+  if (lang === 'ms') {
+    return [
+      '',
+      '## ACTIVE LANGUAGE OVERRIDE',
+      'The visitor is writing in Bahasa Malaysia. You MUST reply in BM. Mix in',
+      'English brand/industry terms naturally — KOL, campaign, proposal, brief,',
+      'Motherhood, Kelab Mama, Ibuencer, sampling, RM50K — do NOT translate those.',
+      'Do NOT reply in English. Just reply in BM.',
+    ].join('\n');
+  }
+  return '';
+}
+
 app.post('/api/chat', async (req, res) => {
   const ip = clientIp(req);
   if (!checkRateLimit(chatRateLimit, ip, CHAT_RATE_WINDOW_MS, CHAT_RATE_MAX)) {
@@ -448,13 +507,15 @@ app.post('/api/chat', async (req, res) => {
   }
 
   const messages = toAnthropicMessages(req.body?.history, message);
+  const replyLang = detectReplyLanguage(message, req.body?.history);
+  const systemPrompt = NUREN_KNOWLEDGE + languageDirective(replyLang);
 
   try {
     const response = await client.messages.create({
       model: CHAT_MODEL,
       max_tokens: CHAT_MAX_TOKENS,
       temperature: 0.4,
-      system: NUREN_KNOWLEDGE,
+      system: systemPrompt,
       messages,
     });
 
