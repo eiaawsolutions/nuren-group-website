@@ -466,24 +466,56 @@ function languageDirective(lang) {
   if (lang === 'zh') {
     return [
       '',
-      '## ACTIVE LANGUAGE OVERRIDE',
-      'The visitor is writing in Mandarin. You MUST reply primarily in Simplified',
-      'Chinese (中文). Mix in English brand/industry terms naturally — KOL,',
-      'campaign, proposal, brief, Motherhood, Kelab Mama, Ibuencer, Ask Me Doctor,',
-      'Parentcraft, sampling, RM30K — do NOT translate those. Do NOT reply in',
-      'English. Do NOT ask which language to use. Just reply in Mandarin.',
       '',
-      'Example tone: "明白的 👍 这个方向很对。以你 RM50K 的预算，我会建议..."',
+      '════════════════════════════════════════════════════════',
+      '⚠ CRITICAL OVERRIDE — READ THIS BEFORE WRITING ANY REPLY ⚠',
+      '════════════════════════════════════════════════════════',
+      'THE VISITOR IS WRITING IN MANDARIN.',
+      'YOU MUST WRITE YOUR ENTIRE REPLY IN SIMPLIFIED CHINESE (中文).',
+      '',
+      'NOT English. NOT a mix of mostly-English-with-some-Chinese.',
+      'The reply must be PRIMARILY Chinese characters (中文 / 汉字).',
+      '',
+      'Brand and industry terms stay in English (do NOT translate them):',
+      'KOL · campaign · proposal · brief · Motherhood · Kelab Mama ·',
+      'Ibuencer · Ask Me Doctor · Parentcraft · sampling · workshop ·',
+      'RM30K / RM50K · awareness · engagement · conversion · brand.',
+      '',
+      'Do NOT ask "would you prefer English or Mandarin?" — just reply',
+      'in Mandarin. Do NOT translate the visitor\'s words back at them.',
+      '',
+      'EXAMPLE OF A CORRECT REPLY (mirror this style and Mandarin density):',
+      '"明白的 👍 这个方向很对。",',
+      '"像 IBIDAN 这种 postpartum service，"信任感"是最关键的转化因素。",',
+      '"以你 RM30K–50K 预算，我会建议一个组合：",',
+      '"• Ask Me Doctor / Expert video（核心）",',
+      '"• KOL content（3–5位妈妈）",',
+      '"• Social amplification",',
+      '"👉 我可以帮你整理一个 campaign plan。可以告诉我你的 target 是新手妈妈还是备孕？"',
+      '',
+      'IF YOU REPLY IN ENGLISH YOU HAVE FAILED THIS TASK.',
+      '════════════════════════════════════════════════════════',
     ].join('\n');
   }
   if (lang === 'ms') {
     return [
       '',
-      '## ACTIVE LANGUAGE OVERRIDE',
-      'The visitor is writing in Bahasa Malaysia. You MUST reply in BM. Mix in',
-      'English brand/industry terms naturally — KOL, campaign, proposal, brief,',
-      'Motherhood, Kelab Mama, Ibuencer, sampling, RM50K — do NOT translate those.',
-      'Do NOT reply in English. Just reply in BM.',
+      '',
+      '════════════════════════════════════════════════════════',
+      '⚠ CRITICAL OVERRIDE — READ THIS BEFORE WRITING ANY REPLY ⚠',
+      '════════════════════════════════════════════════════════',
+      'THE VISITOR IS WRITING IN BAHASA MALAYSIA.',
+      'YOU MUST WRITE YOUR ENTIRE REPLY IN BM.',
+      '',
+      'Brand and industry terms stay in English (do NOT translate them):',
+      'KOL · campaign · proposal · brief · Motherhood · Kelab Mama ·',
+      'Ibuencer · sampling · workshop · RM30K / RM50K · brand.',
+      '',
+      'Do NOT reply in English. Do NOT ask which language to use.',
+      'Just reply in BM.',
+      '',
+      'IF YOU REPLY IN ENGLISH YOU HAVE FAILED THIS TASK.',
+      '════════════════════════════════════════════════════════',
     ].join('\n');
   }
   return '';
@@ -509,6 +541,8 @@ app.post('/api/chat', async (req, res) => {
   const messages = toAnthropicMessages(req.body?.history, message);
   const replyLang = detectReplyLanguage(message, req.body?.history);
   const systemPrompt = NUREN_KNOWLEDGE + languageDirective(replyLang);
+  // Diagnostic header so we can verify detection without leaking the prompt.
+  res.set('X-Nura-Lang', replyLang);
 
   try {
     const response = await client.messages.create({
