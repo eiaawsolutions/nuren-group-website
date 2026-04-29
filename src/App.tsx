@@ -319,6 +319,27 @@ const SEO = ({ title, description, keywords, canonical, ogImage, breadcrumbs }: 
   );
 };
 
+const TopCtaBar = ({ onContactClick }: { onContactClick: () => void }) => {
+  return (
+    <div className="fixed top-0 left-0 right-0 z-[60] bg-gradient-to-r from-nuren-pink via-rose-500 to-nuren-pink text-white">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 h-9 flex items-center justify-center sm:justify-between gap-3">
+        <p className="text-[13px] sm:text-sm font-semibold tracking-tight truncate">
+          <span className="hidden sm:inline">Reach 5M+ mums in Malaysia — </span>
+          <span className="sm:hidden">Reach 5M+ mums — </span>
+          <span className="font-normal opacity-90">Let us plan your campaign</span>
+        </p>
+        <button
+          onClick={onContactClick}
+          className="shrink-0 inline-flex items-center gap-1.5 bg-white text-nuren-pink hover:bg-white/90 px-3 sm:px-4 py-1 rounded-full text-xs sm:text-sm font-bold transition-colors shadow-sm"
+        >
+          Get a Proposal
+          <ArrowRight size={14} />
+        </button>
+      </div>
+    </div>
+  );
+};
+
 const Navbar = ({ onContactClick }: { onContactClick: () => void }) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -342,7 +363,7 @@ const Navbar = ({ onContactClick }: { onContactClick: () => void }) => {
   const isHome = location.pathname === '/';
 
   return (
-    <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled || !isHome ? 'bg-white/90 backdrop-blur-md shadow-sm py-3' : 'bg-transparent py-5'}`}>
+    <nav className={`fixed top-9 left-0 right-0 z-50 transition-all duration-300 ${isScrolled || !isHome ? 'bg-white/90 backdrop-blur-md shadow-sm py-3' : 'bg-transparent py-5'}`}>
       <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2">
           <img src="/NurenGroup.jpg" alt="Nuren Group Logo" className="h-10 w-auto object-contain" referrerPolicy="no-referrer" />
@@ -701,7 +722,7 @@ const Products = ({ showAll = false }: { showAll?: boolean }) => {
     <section id="products" className="py-24">
       <div className="max-w-7xl mx-auto px-6">
         <div className="text-center mb-16">
-          <h2 className="text-4xl font-bold text-slate-900 mb-4">Our Products & Platforms</h2>
+          <h2 className="text-4xl font-bold text-slate-900 mb-4">Solutions for Brands</h2>
           <p className="text-slate-600 max-w-2xl mx-auto text-lg">
             We operate a diverse ecosystem of digital products designed to support families and empower women.
           </p>
@@ -2760,13 +2781,14 @@ export default function App() {
                     Visually hidden until focused (Tailwind sr-only + focus utilities). */}
                 <a
                   href="#main-content"
-                  className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:bg-nuren-pink focus:text-white focus:px-4 focus:py-2 focus:rounded-lg focus:font-medium"
+                  className="sr-only focus:not-sr-only focus:fixed focus:top-12 focus:left-4 focus:z-[70] focus:bg-nuren-pink focus:text-white focus:px-4 focus:py-2 focus:rounded-lg focus:font-medium"
                 >
                   Skip to main content
                 </a>
+                <TopCtaBar onContactClick={() => setIsContactModalOpen(true)} />
                 <Navbar onContactClick={() => setIsContactModalOpen(true)} />
 
-                <main id="main-content">
+                <main id="main-content" className="pt-9">
                   <Routes>
                     <Route path="/" element={<Home onContactClick={() => setIsContactModalOpen(true)} />} />
                     <Route path="/ecosystem" element={<EcosystemPage onContactClick={() => setIsContactModalOpen(true)} />} />
