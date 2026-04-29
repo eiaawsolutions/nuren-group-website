@@ -14,13 +14,13 @@ type View = 'chat' | 'form' | 'success';
 const INTRO_MESSAGE: ChatMessage = {
   role: 'model',
   text:
-    "Hi! I'm Nura, your assistant for Nuren Group. Ask me about our ecosystem, brand solutions, or products — or tap \"Talk to our team\" to leave an enquiry.",
+    "Hi! I'm Nura 👋 I help brands reach 5M+ mums across Malaysia. Are you looking to advertise, run KOL campaigns, or explore a partnership? Tap \"Talk to our team\" anytime for a custom proposal.",
 };
 
 const SUGGESTED_PROMPTS = [
-  'What does Nuren Group do?',
-  'Tell me about your products',
-  'How can brands partner with you?',
+  'I want to advertise my brand',
+  'Tell me about Ibuencer KOL campaigns',
+  'How do I get a campaign proposal?',
 ];
 
 const CHAT_ENDPOINT = '/api/chat';
