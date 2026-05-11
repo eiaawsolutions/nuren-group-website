@@ -1,0 +1,151 @@
+import { useState, useEffect, useMemo } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { useNavigate } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
+
+const SLIDE_COUNT = 15;
+// Each slide holds steady on screen, then cross-fades into the next.
+// Slightly longer hold + longer fade gives a more cinematic, story-like pace.
+const SLIDE_DURATION_MS = 7000;
+const FADE_MS = 2000;
+
+const buildSlides = (count: number): string[] =>
+  Array.from({ length: count }, (_, i) => `/hero/slide-${String(i + 1).padStart(2, '0')}.jpeg`);
+
+export const HeroLanding = () => {
+  const slides = useMemo(() => buildSlides(SLIDE_COUNT), []);
+  const [index, setIndex] = useState(0);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      setIndex((i) => (i + 1) % slides.length);
+    }, SLIDE_DURATION_MS);
+    return () => window.clearInterval(id);
+  }, [slides.length]);
+
+  // Warm the next image so the cross-fade isn't waiting on the network.
+  useEffect(() => {
+    const next = (index + 1) % slides.length;
+    const img = new Image();
+    img.src = slides[next];
+  }, [index, slides]);
+
+  const handleEnter = () => {
+    navigate('/home');
+  };
+
+  return (
+    <div className="fixed inset-0 w-screen h-screen overflow-hidden bg-black">
+      <Helmet>
+        <title>Nuren Group · Empower Women in Parenting, Education & Maternity Wellness</title>
+        <meta
+          name="description"
+          content="Nuren Group — Southeast Asia's leading community-powered commerce platform, empowering women in parenting, education, and maternity wellness."
+        />
+        {/* Point search engines at the rich /home page so the splash doesn't dilute SEO. */}
+        <link rel="canonical" href="https://nurengroup.com/home" />
+        <link rel="preload" as="image" href={slides[0]} />
+      </Helmet>
+
+      {/* Slideshow — each slide holds still and cross-fades into the next.
+          Two-layer technique so the full image is always visible:
+            (1) Blurred copy with `cover` fills the viewport as ambient backdrop,
+                so there's never any blank space on widescreen monitors.
+            (2) Foreground copy with `contain` shows the entire image without
+                cropping, regardless of viewport aspect ratio. */}
+      <AnimatePresence mode="sync">
+        <motion.div
+          key={index}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: FADE_MS / 1000, ease: 'easeInOut' }}
+          className="absolute inset-0 w-full h-full"
+          aria-hidden="true"
+        >
+          {/* Blurred ambient backdrop — fills the viewport, hides blur edges
+              with a small upscale, dimmed slightly so the foreground pops. */}
+          <div
+            className="absolute inset-0 w-full h-full"
+            style={{
+              backgroundImage: `url(${slides[index]})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              backgroundRepeat: 'no-repeat',
+              filter: 'blur(40px) brightness(0.65)',
+              transform: 'scale(1.15)',
+            }}
+          />
+          {/* Foreground — the full image, never cropped. */}
+          <div
+            className="absolute inset-0 w-full h-full"
+            style={{
+              backgroundImage: `url(${slides[index]})`,
+              backgroundSize: 'contain',
+              backgroundPosition: 'center',
+              backgroundRepeat: 'no-repeat',
+            }}
+          />
+        </motion.div>
+      </AnimatePresence>
+
+      {/* Whisper-soft uniform dim — no visible "band" cutting across the
+          composition. Just enough darkening to give the foreground text a
+          subtle contrast lift against bright slides. */}
+      <div className="absolute inset-0 bg-black/15 pointer-events-none" />
+
+      {/* Foreground content. */}
+      <div className="relative z-10 w-full h-full">
+        {/* Enter button — sits lower on tall monitors (matches the original
+            cinematic layout) but rides up on shorter laptops/mobiles so the
+            title cluster below has clearance. */}
+        <div className="absolute left-1/2 top-[55%] sm:top-[60%] md:top-[64%] lg:top-[68%] -translate-x-1/2 -translate-y-1/2">
+          <motion.button
+            onClick={handleEnter}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.3 }}
+            className="px-12 py-3 rounded-full bg-black/15 text-white text-base sm:text-lg font-light tracking-wide hover:bg-[#ee5174] hover:shadow-lg hover:shadow-[#ee5174]/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#ee5174]/60 transition-all"
+            aria-label="Enter the Nuren Group website"
+          >
+            Enter
+          </motion.button>
+        </div>
+
+        {/* Title + subtitle anchored near the bottom of the viewport.
+            No horizontal padding on the parent — the subtitle row needs the
+            full viewport width so its flanking lines reach the screen edges.
+            The title gets its own px-6 to keep some breathing room on mobile. */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 1, delay: 0.5 }}
+          className="absolute left-0 right-0 bottom-[5vh] sm:bottom-[6vh] md:bottom-[7vh] flex flex-col items-center"
+        >
+          {/* Montserrat Bold. clamp() honors the 80pt spec on tall desktop
+              monitors but scales the title down proportionally on shorter
+              laptops and phones — that's what stops the title from crashing
+              into the Enter button on a 1366x768 laptop. */}
+          <h1 className="font-montserrat font-bold text-[#ee5174] tracking-tight text-center leading-none drop-shadow-[0_2px_8px_rgba(0,0,0,0.25)] px-6 text-[clamp(48pt,13vh,110pt)]">
+            NUREN GROUP
+          </h1>
+          {/* Subtitle row — w-full + parent has no horizontal padding, so the
+              flanking lines stretch from screen edge to screen edge.
+              On mobile the long subtitle wraps naturally so it never overflows
+              past the viewport edge; on tablet+ it stays on one line. */}
+          <div className="mt-1 sm:mt-2 md:mt-3 flex items-center gap-3 sm:gap-6 md:gap-8 w-full">
+            <div className="flex-1 h-px bg-white/60 min-w-[20px]" />
+            {/* Montserrat Medium. clamp() honors 28pt at desktop, scales down
+                on smaller viewports. max-w + whitespace-normal on mobile lets
+                the line wrap rather than overflow off the right edge. */}
+            <p className="font-montserrat font-medium text-white tracking-[0.05em] text-center whitespace-normal sm:whitespace-nowrap text-[clamp(14pt,3.5vh,36pt)] max-w-[80vw] sm:max-w-none px-2 sm:px-0">
+              Empower Women in Parenting, Education &amp; Maternity Wellness
+            </p>
+            <div className="flex-1 h-px bg-white/60 min-w-[20px]" />
+          </div>
+        </motion.div>
+      </div>
+    </div>
+  );
+};

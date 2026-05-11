@@ -5,6 +5,7 @@ import { Helmet, HelmetProvider } from 'react-helmet-async';
 import { governanceDocs } from './data/governanceDocs';
 import { Chatbot } from './components/Chatbot/Chatbot';
 import { AdminPage } from './components/Admin/AdminPage';
+import { HeroLanding } from './components/Hero/HeroLanding';
 import { 
   Users, 
   Store, 
@@ -354,27 +355,29 @@ const Navbar = ({ onContactClick }: { onContactClick: () => void }) => {
   }, []);
 
   const navLinks = [
-    { name: 'Home', href: '/' },
+    { name: 'Home', href: '/home' },
     { name: 'Ecosystem', href: '/ecosystem' },
     { name: 'Products', href: '/products' },
-    { name: 'For Brands', href: '/#brands' },
+    { name: 'For Brands', href: '/home#brands' },
     { name: 'Investors', href: '/investors' },
     { name: 'Careers', href: '/careers' },
   ];
 
-  const isHome = location.pathname === '/';
+  // Transparent navbar at top while on the home page; solid otherwise.
+  // The cinematic landing at "/" doesn't render the navbar at all (separate route).
+  const isHome = location.pathname === '/home';
 
   return (
     <nav className={`fixed top-9 left-0 right-0 z-50 transition-all duration-300 ${isScrolled || !isHome ? 'bg-white/90 backdrop-blur-md shadow-sm py-3' : 'bg-transparent py-5'}`}>
       <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
-        <Link to="/" className="flex items-center gap-2">
+        <Link to="/home" className="flex items-center gap-2">
           <img src="/NurenGroup.jpg" alt="Nuren Group Logo" className="h-10 w-auto object-contain" referrerPolicy="no-referrer" />
         </Link>
 
         {/* Desktop Nav */}
         <div className="hidden md:flex items-center gap-8">
           {navLinks.map((link) => (
-            link.href.startsWith('/#') ? (
+            link.href.includes('#') ? (
               <a 
                 key={link.name} 
                 href={link.href} 
@@ -422,7 +425,7 @@ const Navbar = ({ onContactClick }: { onContactClick: () => void }) => {
           >
             <div className="flex flex-col gap-4">
               {navLinks.map((link) => (
-                link.href.startsWith('/#') ? (
+                link.href.includes('#') ? (
                   <a 
                     key={link.name} 
                     href={link.href} 
@@ -1584,7 +1587,7 @@ const MediaHubPage = ({ onContactClick }: { onContactClick: () => void }) => {
         keywords="Nuren Group news, media hub, press releases, parenting tech insights, Southeast Asia digital media"
         canonical="https://nurengroup.com/media-hub"
         breadcrumbs={[
-          { name: 'Home', url: '/' },
+          { name: 'Home', url: '/home' },
           { name: 'Media Hub', url: '/media-hub' },
         ]}
       />
@@ -1743,7 +1746,7 @@ const BoardOfDirectorsPage = () => {
         keywords="Nuren Group board, leadership, corporate governance, Petrina Goh, Kelvin Leow, Prof Dr Wong"
         canonical="https://nurengroup.com/board-of-directors"
         breadcrumbs={[
-          { name: 'Home', url: '/' },
+          { name: 'Home', url: '/home' },
           { name: 'Board of Directors', url: '/board-of-directors' },
         ]}
       />
@@ -1909,7 +1912,7 @@ const CorporateGovernancePage = () => {
         keywords="corporate governance, business ethics, transparency, Nuren Group policies"
         canonical="https://nurengroup.com/investors/corporate-governance"
         breadcrumbs={[
-          { name: 'Home', url: '/' },
+          { name: 'Home', url: '/home' },
           { name: 'Investors', url: '/investors' },
           { name: 'Corporate Governance', url: '/investors/corporate-governance' },
         ]}
@@ -2084,7 +2087,7 @@ const GovernanceDocumentsPage = () => {
         keywords={`governance documents, ${selectedDoc.title}, Nuren Group policies`}
         canonical={`https://nurengroup.com/investors/governance-documents/${selectedDoc.id}`}
         breadcrumbs={[
-          { name: 'Home', url: '/' },
+          { name: 'Home', url: '/home' },
           { name: 'Investors', url: '/investors' },
           { name: 'Governance Documents', url: '/investors/governance-documents' },
           { name: selectedDoc.title, url: `/investors/governance-documents/${selectedDoc.id}` },
@@ -2190,7 +2193,7 @@ const InvestorsPage = () => {
         keywords="investor relations, Nuren Group stock, financial performance, market announcements"
         canonical="https://nurengroup.com/investors"
         breadcrumbs={[
-          { name: 'Home', url: '/' },
+          { name: 'Home', url: '/home' },
           { name: 'Investors', url: '/investors' },
         ]}
       />
@@ -2320,7 +2323,7 @@ const CareersPage = () => {
         keywords="Nuren Group careers, jobs in Malaysia, tech jobs SEA, join Nuren Group"
         canonical="https://nurengroup.com/careers"
         breadcrumbs={[
-          { name: 'Home', url: '/' },
+          { name: 'Home', url: '/home' },
           { name: 'Careers', url: '/careers' },
         ]}
       />
@@ -2501,7 +2504,7 @@ const EcosystemPage = ({ onContactClick }: { onContactClick: () => void }) => {
         keywords="Nuren Group ecosystem, parenting platforms, Motherhood SuperApp, Ibuencer network, Kelabmama, digital family support SE Asia"
         canonical="https://nurengroup.com/ecosystem"
         breadcrumbs={[
-          { name: 'Home', url: '/' },
+          { name: 'Home', url: '/home' },
           { name: 'Ecosystem', url: '/ecosystem' },
         ]}
       />
@@ -2700,7 +2703,7 @@ const EcosystemPage = ({ onContactClick }: { onContactClick: () => void }) => {
             >
               Partner with Us
             </button>
-            <Link to="/" className="w-full sm:w-auto bg-slate-100 text-slate-700 px-10 py-4 rounded-full font-bold text-lg hover:bg-slate-200 transition-all">
+            <Link to="/home" className="w-full sm:w-auto bg-slate-100 text-slate-700 px-10 py-4 rounded-full font-bold text-lg hover:bg-slate-200 transition-all">
               Back to Home
             </Link>
           </div>
@@ -2725,7 +2728,7 @@ const ProductsPage = () => {
         keywords="parenting platforms, Motherhood.com.my, Kelabmama, Ibuencer, digital products, family ecosystem"
         canonical="https://nurengroup.com/products"
         breadcrumbs={[
-          { name: 'Home', url: '/' },
+          { name: 'Home', url: '/home' },
           { name: 'Products', url: '/products' },
         ]}
       />
@@ -2739,11 +2742,11 @@ const ProductsPage = () => {
 const Home = ({ onContactClick }: { onContactClick: () => void }) => {
   return (
     <>
-      <SEO 
+      <SEO
         title="Nuren Group - Southeast Asia's Leading Community-Powered Commerce Platform"
         description="Nuren Group is a community-driven digital ecosystem connecting brands with highly engaged audiences through trusted platforms, data, and technology in SE Asia."
         keywords="Nuren Group, community-powered commerce, parenting ecosystem, Southeast Asia, Motherhood SuperApp, Ibuencer, Kelabmama, digital family ecosystem, women empowerment"
-        canonical="https://nurengroup.com/"
+        canonical="https://nurengroup.com/home"
       />
       <Hero />
       <Stats />
@@ -2789,6 +2792,9 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/admin" element={<AdminPage />} />
+          {/* Cinematic landing — fullscreen, no navbar/footer/chatbot chrome.
+              Lives outside the catchall so the standard site layout doesn't render around it. */}
+          <Route path="/" element={<HeroLanding />} />
           <Route
             path="*"
             element={
@@ -2806,7 +2812,7 @@ export default function App() {
 
                 <main id="main-content" className="pt-9">
                   <Routes>
-                    <Route path="/" element={<Home onContactClick={() => setIsContactModalOpen(true)} />} />
+                    <Route path="/home" element={<Home onContactClick={() => setIsContactModalOpen(true)} />} />
                     <Route path="/ecosystem" element={<EcosystemPage onContactClick={() => setIsContactModalOpen(true)} />} />
                     <Route path="/products" element={<ProductsPage />} />
                     <Route path="/investors" element={<InvestorsPage />} />

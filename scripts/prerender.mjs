@@ -20,7 +20,8 @@ const DIST_DIR = join(__dirname, '..', 'dist');
 // and any route with a dynamic param (governance-documents/:docId) — those
 // are fine as runtime SPA routes.
 const ROUTES = [
-  '/',
+  '/',          // cinematic landing splash (HeroLanding)
+  '/home',      // the rich Nuren Group home page (was at "/")
   '/ecosystem',
   '/products',
   '/investors',
