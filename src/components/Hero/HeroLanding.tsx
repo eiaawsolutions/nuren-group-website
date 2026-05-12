@@ -9,6 +9,15 @@ const SLIDE_COUNT = 15;
 const SLIDE_DURATION_MS = 7000;
 const FADE_MS = 2000;
 
+// Shared Enter button styling — used by both the desktop (absolute, cinematic
+// position) and mobile/tablet (stacked above title) Enter buttons so the
+// visual styling stays in sync without duplication drift.
+const ENTER_BTN_CLASS =
+  'px-12 py-3 rounded-full bg-black/15 text-white text-base sm:text-lg font-light tracking-wide ' +
+  'hover:bg-[#ee5174] hover:shadow-lg hover:shadow-[#ee5174]/30 ' +
+  'active:bg-[#ee5174] active:shadow-lg active:shadow-[#ee5174]/30 ' +
+  'focus:outline-none focus-visible:ring-2 focus-visible:ring-[#ee5174]/60 transition-all';
+
 const buildSlides = (count: number): string[] =>
   Array.from({ length: count }, (_, i) => `/hero/slide-${String(i + 1).padStart(2, '0')}.jpeg`);
 
@@ -97,16 +106,17 @@ export const HeroLanding = () => {
 
       {/* Foreground content. */}
       <div className="relative z-10 w-full h-full">
-        {/* Enter button — sits lower on tall monitors (matches the original
-            cinematic layout) but rides up on shorter laptops/mobiles so the
-            title cluster below has clearance. */}
-        <div className="absolute left-1/2 top-[55%] sm:top-[60%] md:top-[64%] lg:top-[68%] -translate-x-1/2 -translate-y-1/2">
+        {/* Desktop Enter button — absolute cinematic position high above the
+            title. Only shown on lg+ (>=1024px); on smaller screens the button
+            is rendered inside the title cluster below instead, so it sits
+            directly above the title and stays clear of the slideshow content. */}
+        <div className="hidden lg:block absolute left-1/2 top-[68%] -translate-x-1/2 -translate-y-1/2">
           <motion.button
             onClick={handleEnter}
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.3 }}
-            className="px-12 py-3 rounded-full bg-black/15 text-white text-base sm:text-lg font-light tracking-wide hover:bg-[#ee5174] hover:shadow-lg hover:shadow-[#ee5174]/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#ee5174]/60 transition-all"
+            className={ENTER_BTN_CLASS}
             aria-label="Enter the Nuren Group website"
           >
             Enter
@@ -123,11 +133,25 @@ export const HeroLanding = () => {
           transition={{ duration: 1, delay: 0.5 }}
           className="absolute left-0 right-0 bottom-[5vh] sm:bottom-[6vh] md:bottom-[7vh] flex flex-col items-center"
         >
-          {/* Montserrat Bold. clamp() honors the 80pt spec on tall desktop
-              monitors but scales the title down proportionally on shorter
-              laptops and phones — that's what stops the title from crashing
-              into the Enter button on a 1366x768 laptop. */}
-          <h1 className="font-montserrat font-bold text-[#ee5174] tracking-tight text-center leading-none drop-shadow-[0_2px_8px_rgba(0,0,0,0.25)] px-6 text-[clamp(48pt,13vh,110pt)]">
+          {/* Mobile/tablet Enter button — sits directly above the title in
+              the stacked cluster. Hidden on lg+ (the desktop button above
+              takes over). `display: none` removes it from the tab order and
+              accessibility tree on desktop, so there's only ever one
+              effective Enter button. */}
+          <button
+            onClick={handleEnter}
+            className={`${ENTER_BTN_CLASS} lg:hidden mb-4 sm:mb-6`}
+            aria-label="Enter the Nuren Group website"
+          >
+            Enter
+          </button>
+          {/* Montserrat Bold. Sized by min(vw, vh) — scaled by viewport WIDTH
+              on narrow screens (mobile portrait) so the title fits on one line,
+              and by viewport HEIGHT on short screens (laptop 1366x768) so it
+              never grows tall enough to crash into the Enter button above it.
+              Whichever dimension is more constrained wins. Capped at 120pt so
+              ultrawide 4K monitors don't get an absurdly oversized title. */}
+          <h1 className="font-montserrat font-bold text-[#ee5174] tracking-tight text-center leading-none drop-shadow-[0_2px_8px_rgba(0,0,0,0.25)] px-6 text-[clamp(28pt,min(7.5vw,11vh),120pt)]">
             NUREN GROUP
           </h1>
           {/* Subtitle row — w-full + parent has no horizontal padding, so the
@@ -136,10 +160,12 @@ export const HeroLanding = () => {
               past the viewport edge; on tablet+ it stays on one line. */}
           <div className="mt-1 sm:mt-2 md:mt-3 flex items-center gap-3 sm:gap-6 md:gap-8 w-full">
             <div className="flex-1 h-px bg-white/60 min-w-[20px]" />
-            {/* Montserrat Medium. clamp() honors 28pt at desktop, scales down
-                on smaller viewports. max-w + whitespace-normal on mobile lets
-                the line wrap rather than overflow off the right edge. */}
-            <p className="font-montserrat font-medium text-white tracking-[0.05em] text-center whitespace-normal sm:whitespace-nowrap text-[clamp(14pt,3.5vh,36pt)] max-w-[80vw] sm:max-w-none px-2 sm:px-0">
+            {/* Montserrat Medium. Same min(vw, vh) pattern as the title so
+                the subtitle stays proportional to the title at every viewport
+                — never disproportionately huge on wide monitors or tiny on
+                short ones. max-w + whitespace-normal on mobile lets the line
+                wrap rather than overflow off the right edge. */}
+            <p className="font-montserrat font-medium text-white tracking-[0.05em] text-center whitespace-normal sm:whitespace-nowrap text-[clamp(11pt,min(2vw,2.5vh),32pt)] max-w-[88vw] sm:max-w-none px-2 sm:px-0">
               Empower Women in Parenting, Education &amp; Maternity Wellness
             </p>
             <div className="flex-1 h-px bg-white/60 min-w-[20px]" />
