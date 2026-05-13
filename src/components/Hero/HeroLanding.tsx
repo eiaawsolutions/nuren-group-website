@@ -44,8 +44,12 @@ export const HeroLanding = () => {
     navigate('/home');
   };
 
+  // `h-dvh` (dynamic viewport height) measures the ACTUAL visible area on
+  // mobile, accounting for the URL bar and bottom nav. Plain `100vh` measures
+  // the largest possible viewport (URL bar collapsed), which pushes content
+  // off-screen when the browser chrome is showing.
   return (
-    <div className="fixed inset-0 w-screen h-screen overflow-hidden bg-black">
+    <div className="fixed inset-0 w-screen h-dvh overflow-hidden bg-black">
       <Helmet>
         <title>Nuren Group · Empower Women in Parenting, Education & Maternity Wellness</title>
         <meta
@@ -58,11 +62,13 @@ export const HeroLanding = () => {
       </Helmet>
 
       {/* Slideshow — each slide holds still and cross-fades into the next.
-          Two-layer technique so the full image is always visible:
-            (1) Blurred copy with `cover` fills the viewport as ambient backdrop,
-                so there's never any blank space on widescreen monitors.
-            (2) Foreground copy with `contain` shows the entire image without
-                cropping, regardless of viewport aspect ratio. */}
+          Two-layer technique so the full illustration is always visible at
+          every screen size (mobile included):
+            (1) Blurred copy with `cover` fills the viewport as ambient
+                backdrop, so portrait-phone empty bands don't read as dead
+                black space — they pick up the slide's dominant colors.
+            (2) Foreground with `contain` shows the entire illustration
+                without cropping, regardless of viewport aspect ratio. */}
       <AnimatePresence mode="sync">
         <motion.div
           key={index}
@@ -73,8 +79,9 @@ export const HeroLanding = () => {
           className="absolute inset-0 w-full h-full"
           aria-hidden="true"
         >
-          {/* Blurred ambient backdrop — fills the viewport, hides blur edges
-              with a small upscale, dimmed slightly so the foreground pops. */}
+          {/* Blurred ambient backdrop — fills the viewport at every screen
+              size so the empty space around the contained foreground always
+              picks up the slide's mood instead of showing flat black. */}
           <div
             className="absolute inset-0 w-full h-full"
             style={{
@@ -82,19 +89,16 @@ export const HeroLanding = () => {
               backgroundSize: 'cover',
               backgroundPosition: 'center',
               backgroundRepeat: 'no-repeat',
-              filter: 'blur(40px) brightness(0.65)',
+              filter: 'blur(40px) brightness(0.7)',
               transform: 'scale(1.15)',
             }}
           />
-          {/* Foreground — the full image, never cropped. */}
+          {/* Foreground — full illustration visible at every viewport. On
+              portrait phones the empty bands above/below are filled by the
+              blurred backdrop above, not flat black. */}
           <div
-            className="absolute inset-0 w-full h-full"
-            style={{
-              backgroundImage: `url(${slides[index]})`,
-              backgroundSize: 'contain',
-              backgroundPosition: 'center',
-              backgroundRepeat: 'no-repeat',
-            }}
+            className="absolute inset-0 w-full h-full bg-center bg-no-repeat bg-contain"
+            style={{ backgroundImage: `url(${slides[index]})` }}
           />
         </motion.div>
       </AnimatePresence>
@@ -131,7 +135,7 @@ export const HeroLanding = () => {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 1, delay: 0.5 }}
-          className="absolute left-0 right-0 bottom-[5vh] sm:bottom-[6vh] md:bottom-[7vh] flex flex-col items-center"
+          className="absolute left-0 right-0 bottom-[5dvh] sm:bottom-[6dvh] md:bottom-[7dvh] flex flex-col items-center"
         >
           {/* Mobile/tablet Enter button — sits directly above the title in
               the stacked cluster. Hidden on lg+ (the desktop button above
