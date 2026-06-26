@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { BrowserRouter, Routes, Route, Link, useLocation, useParams } from 'react-router-dom';
 import { Helmet, HelmetProvider } from 'react-helmet-async';
 import { governanceDocs } from './data/governanceDocs';
+import { fetchAnnouncements, NSX_ANNOUNCEMENTS_URL, type Announcement } from './data/announcements';
 import { Chatbot } from './components/Chatbot/Chatbot';
 import { AdminPage } from './components/Admin/AdminPage';
 import { 
@@ -36,7 +37,9 @@ import {
   Database,
   Share2,
   Mail,
-  MessageCircle
+  MessageCircle,
+  Download,
+  Calendar
 } from 'lucide-react';
 
 // --- Components ---
@@ -1019,34 +1022,39 @@ const Newsroom = () => {
 
 const Investors = () => {
   const investorLinks = [
-    { 
-      title: 'Company Information', 
-      desc: 'Detailed directory and market data on NSX.', 
+    {
+      title: 'Company Information',
+      desc: 'Detailed directory and market data on NSX.',
       link: 'https://www.nsx.com.au/marketdata/company-directory/details/NRN/',
+      external: true,
       icon: <Info className="text-blue-600" />
     },
-    { 
-      title: 'Corporate Governance', 
-      desc: 'Our commitment to transparency and ethical business practices.', 
+    {
+      title: 'Corporate Governance',
+      desc: 'Our commitment to transparency and ethical business practices.',
       link: '/investors/corporate-governance',
+      external: false,
       icon: <Gavel className="text-purple-600" />
     },
-    { 
-      title: 'Announcements', 
-      desc: 'Latest market announcements and regulatory filings.', 
-      link: 'https://www.nsx.com.au/marketdata/company-directory/announcements/NRN/',
+    {
+      title: 'Announcements',
+      desc: 'Latest market announcements and regulatory filings, published as released.',
+      link: '/investors/announcements',
+      external: false,
       icon: <Megaphone className="text-orange-600" />
     },
-    { 
-      title: 'Financial Reports', 
-      desc: 'Annual and periodic financial performance reports.', 
+    {
+      title: 'Financial Reports',
+      desc: 'Annual and periodic financial performance reports.',
       link: 'https://www.nsx.com.au/marketdata/company-directory/announcements/NRN/',
+      external: true,
       icon: <FileText className="text-emerald-600" />
     },
-    { 
-      title: 'Board of Directors', 
-      desc: 'Meet the experienced leaders guiding Nuren Group strategy.', 
+    {
+      title: 'Board of Directors',
+      desc: 'Meet the experienced leaders guiding Nuren Group strategy.',
       link: '/board-of-directors',
+      external: false,
       icon: <Users className="text-pink-600" />
     }
   ];
@@ -1062,28 +1070,43 @@ const Investors = () => {
         </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {investorLinks.map((item, idx) => (
-            <motion.a 
-              key={idx}
-              href={item.link}
-              target="_blank"
-              rel="noopener noreferrer"
-              whileHover={{ y: -5 }}
-              className="bg-white p-8 rounded-[32px] border border-slate-100 shadow-sm hover:shadow-xl hover:border-nuren-pink/20 transition-all group"
-            >
-              <div className="w-14 h-14 bg-slate-50 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                {item.icon}
-              </div>
-              <h3 className="text-xl font-bold text-slate-900 mb-3 group-hover:text-nuren-pink transition-colors">{item.title}</h3>
-              <p className="text-slate-500 text-sm leading-relaxed mb-6">
-                {item.desc}
-              </p>
-              <div className="flex items-center gap-2 text-nuren-pink font-bold text-sm">
-                Learn More
-                <ExternalLink size={14} />
-              </div>
-            </motion.a>
-          ))}
+          {investorLinks.map((item, idx) => {
+            const cardClass = "bg-white p-8 rounded-[32px] border border-slate-100 shadow-sm hover:shadow-xl hover:border-nuren-pink/20 transition-all group block";
+            const inner = (
+              <>
+                <div className="w-14 h-14 bg-slate-50 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                  {item.icon}
+                </div>
+                <h3 className="text-xl font-bold text-slate-900 mb-3 group-hover:text-nuren-pink transition-colors">{item.title}</h3>
+                <p className="text-slate-500 text-sm leading-relaxed mb-6">
+                  {item.desc}
+                </p>
+                <div className="flex items-center gap-2 text-nuren-pink font-bold text-sm">
+                  Learn More
+                  {item.external ? <ExternalLink size={14} /> : <ArrowRight size={14} />}
+                </div>
+              </>
+            );
+
+            return item.external ? (
+              <motion.a
+                key={idx}
+                href={item.link}
+                target="_blank"
+                rel="noopener noreferrer"
+                whileHover={{ y: -5 }}
+                className={cardClass}
+              >
+                {inner}
+              </motion.a>
+            ) : (
+              <motion.div key={idx} whileHover={{ y: -5 }}>
+                <Link to={item.link} className={cardClass}>
+                  {inner}
+                </Link>
+              </motion.div>
+            );
+          })}
         </div>
       </div>
     </section>
@@ -2177,6 +2200,284 @@ const GovernanceDocumentsPage = () => {
   );
 };
 
+// --- Investor Announcements Page ---
+
+// Maps a document-type label to a coloured badge. New types fall back to slate.
+const DOC_TYPE_BADGE: Record<string, string> = {
+  'Announcement': 'bg-blue-50 text-blue-700',
+  'Financial Report': 'bg-emerald-50 text-emerald-700',
+  'Notice of Meeting': 'bg-purple-50 text-purple-700',
+  'Presentation': 'bg-amber-50 text-amber-700',
+  'Other': 'bg-slate-100 text-slate-600',
+};
+
+function formatReleaseDate(iso: string): { date: string; time: string } {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return { date: iso, time: '' };
+  const date = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+  const time = d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
+  return { date, time };
+}
+
+const PriceSensitiveBadge = () => (
+  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 text-xs font-bold">
+    <span className="w-1.5 h-1.5 rounded-full bg-amber-500" aria-hidden />
+    Price sensitive
+  </span>
+);
+
+const DocTypeBadge = ({ type }: { type: string }) => (
+  <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-bold ${DOC_TYPE_BADGE[type] || 'bg-slate-100 text-slate-600'}`}>
+    {type || 'Announcement'}
+  </span>
+);
+
+const PdfLink = ({ url, headline, full }: { url: string; headline: string; full?: boolean }) => {
+  if (!url) return <span className="text-slate-300 text-sm">—</span>;
+  const base = 'inline-flex items-center gap-2 font-bold text-sm text-nuren-pink hover:text-nuren-purple transition-colors';
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label={`Download PDF: ${headline}`}
+      className={full ? `${base} justify-center w-full px-4 py-3 rounded-full bg-nuren-pink/10 hover:bg-nuren-pink/15` : base}
+    >
+      <Download size={16} />
+      {full ? 'Download PDF' : 'PDF'}
+    </a>
+  );
+};
+
+const AnnouncementsSkeleton = () => (
+  <div className="space-y-3" aria-hidden>
+    {Array.from({ length: 6 }).map((_, i) => (
+      <div key={i} className="flex items-center gap-4 p-4 rounded-2xl border border-slate-100">
+        <div className="h-4 w-28 bg-slate-100 rounded-lg animate-pulse" />
+        <div className="h-4 flex-1 bg-slate-100 rounded-lg animate-pulse" />
+        <div className="h-4 w-24 bg-slate-100 rounded-lg animate-pulse" />
+        <div className="h-4 w-16 bg-slate-100 rounded-lg animate-pulse" />
+      </div>
+    ))}
+  </div>
+);
+
+const InvestorAnnouncementsPage = () => {
+  const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [data, setData] = useState<Announcement[]>([]);
+  const [fromCache, setFromCache] = useState(false);
+  const [yearFilter, setYearFilter] = useState<'all' | number>('all');
+  const [perPage, setPerPage] = useState(25);
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    let cancelled = false;
+    fetchAnnouncements()
+      .then((res) => {
+        if (cancelled) return;
+        setData(res.announcements);
+        setFromCache(res.fromCache);
+        setStatus('ready');
+      })
+      .catch(() => {
+        if (!cancelled) setStatus('error');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Distinct years present, newest first, for the year filter.
+  const years = Array.from(new Set<number>(data.map((a) => a.year).filter((y) => y > 0))).sort((a, b) => b - a);
+
+  const filtered = yearFilter === 'all' ? data : data.filter((a) => a.year === yearFilter);
+  const visible = filtered.slice(0, perPage);
+
+  return (
+    <div className="pt-20">
+      <SEO
+        title="Announcements | Investors | Nuren Group"
+        description="Latest market announcements and regulatory filings from Nuren Group (NSX: NRN). View and download official corporate announcements as they are released."
+        keywords="Nuren Group announcements, NRN announcements, NSX NRN, investor announcements, regulatory filings, market announcements"
+        canonical="https://nurengroup.com/investors/announcements"
+        breadcrumbs={[
+          { name: 'Home', url: '/' },
+          { name: 'Investors', url: '/investors' },
+          { name: 'Announcements', url: '/investors/announcements' },
+        ]}
+      />
+
+      {/* Hero */}
+      <section className="py-16 bg-slate-50 border-b border-slate-200">
+        <div className="max-w-7xl mx-auto px-6">
+          <Link to="/investors" className="inline-flex items-center gap-2 text-slate-500 hover:text-nuren-pink mb-8 transition-colors">
+            <ChevronRight className="rotate-180" size={20} />
+            Back to Investors
+          </Link>
+          <h1 className="text-4xl md:text-5xl font-bold text-slate-900">Announcements</h1>
+          <p className="text-slate-600 mt-4 max-w-2xl text-lg">
+            Official market announcements and regulatory filings for Nuren Group, published as they are released.
+            Securities exchange code: <span className="font-semibold text-slate-900">NSX: NRN</span>.
+          </p>
+        </div>
+      </section>
+
+      <section className="py-12">
+        <div className="max-w-7xl mx-auto px-6">
+          {/* Always-rendered fallback for non-JS crawlers / agents and the
+              prerendered shell. Hidden once announcements render in the browser. */}
+          <noscript>
+            <p className="text-slate-600">
+              View the latest Nuren Group (NSX: NRN) market announcements on the{' '}
+              <a href={NSX_ANNOUNCEMENTS_URL} className="text-nuren-pink underline">NSX announcements page</a>.
+            </p>
+          </noscript>
+
+          {status === 'loading' && <AnnouncementsSkeleton />}
+
+          {status === 'error' && (
+            <div className="text-center py-16 max-w-xl mx-auto">
+              <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-6">
+                <Megaphone className="text-slate-400" size={28} />
+              </div>
+              <h2 className="text-xl font-bold text-slate-900 mb-3">We&apos;re unable to load the latest announcements right now</h2>
+              <p className="text-slate-500 mb-8">You can view Nuren Group&apos;s official announcements on the NSX market announcements page.</p>
+              <a
+                href={NSX_ANNOUNCEMENTS_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-8 py-4 rounded-full bg-nuren-pink text-white font-bold hover:bg-nuren-purple transition-colors"
+              >
+                View announcements on NSX
+                <ExternalLink size={16} />
+              </a>
+            </div>
+          )}
+
+          {status === 'ready' && (
+            <>
+              {fromCache && (
+                <div className="mb-6 px-4 py-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-sm">
+                  Showing recently cached announcements — we couldn&apos;t reach the live feed. The list may not be fully up to date.
+                </div>
+              )}
+
+              {/* Filters */}
+              <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
+                <div className="flex items-center gap-3">
+                  <Calendar size={18} className="text-slate-400" />
+                  <label htmlFor="year-filter" className="sr-only">Filter by year</label>
+                  <select
+                    id="year-filter"
+                    value={yearFilter}
+                    onChange={(e) => setYearFilter(e.target.value === 'all' ? 'all' : Number(e.target.value))}
+                    className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 focus:ring-2 focus:ring-nuren-pink focus:border-nuren-pink focus:outline-none"
+                  >
+                    <option value="all">All years</option>
+                    {years.map((y) => (
+                      <option key={y} value={y}>{y}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex items-center gap-3">
+                  <label htmlFor="per-page" className="text-sm text-slate-500">Show</label>
+                  <select
+                    id="per-page"
+                    value={perPage}
+                    onChange={(e) => setPerPage(Number(e.target.value))}
+                    className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 focus:ring-2 focus:ring-nuren-pink focus:border-nuren-pink focus:outline-none"
+                  >
+                    {[10, 25, 50].map((n) => (
+                      <option key={n} value={n}>{n}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {filtered.length === 0 ? (
+                <div className="text-center py-16">
+                  <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-6">
+                    <Megaphone className="text-slate-400" size={28} />
+                  </div>
+                  <h2 className="text-xl font-bold text-slate-900 mb-2">No announcements for this period</h2>
+                  <p className="text-slate-500">
+                    {yearFilter === 'all'
+                      ? 'New announcements will appear here as they are released.'
+                      : <>Try <button onClick={() => setYearFilter('all')} className="text-nuren-pink font-semibold hover:underline">all years</button>, or view the full record on NSX.</>}
+                  </p>
+                </div>
+              ) : (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                >
+                  {/* Desktop table */}
+                  <div className="hidden md:block overflow-hidden rounded-[32px] border border-slate-100 shadow-sm">
+                    <table className="w-full text-left">
+                      <thead>
+                        <tr className="bg-slate-50 text-xs font-bold uppercase tracking-widest text-slate-400">
+                          <th className="px-6 py-4 w-44">Release date</th>
+                          <th className="px-6 py-4">Headline</th>
+                          <th className="px-6 py-4 w-44">Type</th>
+                          <th className="px-6 py-4 w-32 text-right">Document</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {visible.map((a) => {
+                          const { date, time } = formatReleaseDate(a.date);
+                          return (
+                            <tr key={a.id} className="hover:bg-slate-50 transition-colors align-top">
+                              <td className="px-6 py-5 whitespace-nowrap">
+                                <div className="text-sm font-semibold text-slate-900">{date}</div>
+                                {time && <div className="text-xs text-slate-400">{time}</div>}
+                              </td>
+                              <td className="px-6 py-5">
+                                <div className="text-sm font-medium text-slate-900">{a.headline}</div>
+                                {a.priceSensitive && <div className="mt-2"><PriceSensitiveBadge /></div>}
+                              </td>
+                              <td className="px-6 py-5"><DocTypeBadge type={a.documentType} /></td>
+                              <td className="px-6 py-5 text-right"><PdfLink url={a.pdfUrl} headline={a.headline} /></td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Mobile cards */}
+                  <div className="md:hidden space-y-4">
+                    {visible.map((a) => {
+                      const { date, time } = formatReleaseDate(a.date);
+                      return (
+                        <div key={a.id} className="rounded-[32px] border border-slate-100 shadow-sm p-6">
+                          <div className="flex items-center justify-between gap-3 mb-3">
+                            <div className="text-xs font-semibold text-slate-500">{date}{time && ` · ${time}`}</div>
+                            {a.priceSensitive && <PriceSensitiveBadge />}
+                          </div>
+                          <h3 className="text-base font-bold text-slate-900 mb-3 leading-snug">{a.headline}</h3>
+                          {a.summary && <p className="text-sm text-slate-500 mb-4 leading-relaxed">{a.summary}</p>}
+                          <div className="mb-5"><DocTypeBadge type={a.documentType} /></div>
+                          <PdfLink url={a.pdfUrl} headline={a.headline} full />
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {filtered.length > visible.length && (
+                    <p className="text-center text-sm text-slate-400 mt-8">
+                      Showing {visible.length} of {filtered.length}. Increase &ldquo;Show&rdquo; above to see more.
+                    </p>
+                  )}
+                </motion.div>
+              )}
+            </>
+          )}
+        </div>
+      </section>
+    </div>
+  );
+};
+
 const InvestorsPage = () => {
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -2810,6 +3111,7 @@ export default function App() {
                     <Route path="/ecosystem" element={<EcosystemPage onContactClick={() => setIsContactModalOpen(true)} />} />
                     <Route path="/products" element={<ProductsPage />} />
                     <Route path="/investors" element={<InvestorsPage />} />
+                    <Route path="/investors/announcements" element={<InvestorAnnouncementsPage />} />
                     <Route path="/media-hub" element={<MediaHubPage onContactClick={() => setIsContactModalOpen(true)} />} />
                     <Route path="/investors/corporate-governance" element={<CorporateGovernancePage />} />
                     <Route path="/investors/governance-documents" element={<GovernanceDocumentsPage />} />

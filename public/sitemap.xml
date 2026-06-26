@@ -25,6 +25,12 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://nurengroup.com/investors/announcements</loc>
+    <lastmod>2026-06-25</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://nurengroup.com/media-hub</loc>
     <lastmod>2026-04-08</lastmod>
     <changefreq>daily</changefreq>
