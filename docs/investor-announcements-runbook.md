@@ -1,7 +1,7 @@
 # Investor Announcements — Go-Live Runbook
 
 The page `/investors/announcements` is built and reads its content live from the
-**Sanity** CMS (project `nurengroup-cms`, ID `t0u4o19v`). The finance team publishes
+**Sanity** CMS (project `nurengroup-cms`, ID `t0u4019v`). The finance team publishes
 announcements (including the PDF) from a Sanity Studio dashboard — no developer and no
 website redeploy per announcement.
 
@@ -30,7 +30,7 @@ Until the steps below are done, the page renders a graceful **"view on NSX"** fa
 ## Go-live steps (do once)
 
 ### 1. Create the `production` dataset (currently missing)
-Either in the UI — https://www.sanity.io/manage/project/t0u4o19v → **Datasets** → **Add dataset**
+Either in the UI — https://www.sanity.io/manage/project/t0u4019v → **Datasets** → **Add dataset**
 → name `production` → **visibility: Public** — or via CLI:
 ```bash
 cd c:/laragon/www/nuren-studio
@@ -39,7 +39,7 @@ npx sanity dataset create production --visibility public
 > The website reads without a token, so the dataset **must be Public**.
 
 ### 2. Add CORS origins
-https://www.sanity.io/manage/project/t0u4o19v → **API** → **CORS origins** → **Add** each,
+https://www.sanity.io/manage/project/t0u4019v → **API** → **CORS origins** → **Add** each,
 **Allow credentials = OFF**:
 - `https://www.nurengroup.com`
 - `https://nurengroup.com`
@@ -55,7 +55,7 @@ npm run deploy
 → live at **https://nurengroup-cms.sanity.studio**
 
 ### 4. Invite finance
-https://www.sanity.io/manage/project/t0u4o19v → **Members** → **Invite** finance emails,
+https://www.sanity.io/manage/project/t0u4019v → **Members** → **Invite** finance emails,
 role **Editor**.
 
 ### 5. Deploy the website

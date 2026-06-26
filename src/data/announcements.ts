@@ -23,7 +23,7 @@ export interface Announcement {
 
 // Sanity project "nurengroup-cms" (org oIPHytvHX). projectId + dataset are PUBLIC
 // identifiers, safe to commit. Overridable via VITE_SANITY_* at build time.
-const PROJECT_ID = import.meta.env.VITE_SANITY_PROJECT_ID || 't0u4o19v';
+const PROJECT_ID = import.meta.env.VITE_SANITY_PROJECT_ID || 't0u4019v';
 const DATASET = import.meta.env.VITE_SANITY_DATASET || 'production';
 const API_VERSION = '2024-01-01';
 
