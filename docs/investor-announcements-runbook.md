@@ -18,12 +18,20 @@ Until the steps below are done, the page renders a graceful **"view on NSX"** fa
 | Live fetch from Sanity + cache + NSX fallback | ✅ Done (`src/data/announcements.ts`) |
 | CSP allows Sanity fetch (`server.js`) | ✅ Done |
 | Sanity Studio (schema + config) | ✅ Scaffolded & builds (`c:\laragon\www\nuren-studio`) |
-| Sanity **`production` dataset** | ⚠️ **Not created yet** — query returns 404 |
-| Dataset public read access | ⛔ Pending (after dataset exists) |
-| CORS origins allowlisted | ⛔ Pending |
-| Studio deployed for finance | ⛔ Pending (`npm run deploy`) |
-| Finance invited | ⛔ Pending |
+| Correct project ID wired (`t0u4019v`) | ✅ Done (was misread as `t0u4o19v`; fixed) |
+| Sanity **`production` dataset** | ✅ Exists |
+| Dataset public read access | ✅ Public (live query returns HTTP 200) |
+| CORS origins allowlisted | ✅ Added: `www.nurengroup.com`, `nurengroup.com`, `localhost:3000` (+ `localhost:3333`) |
+| Studio deployed for finance | ✅ Live → **https://nurengroup-cms.sanity.studio** |
+| **Finance invited** | ⛔ **Pending — need their emails** (only remaining step) |
+| Website PR merged → Railway deploy | ⛔ Pending your merge of PR #2 |
 | Railway build var (optional) | ⛔ Optional — code already defaults to the real IDs |
+
+> **Status: the CMS is fully live.** The only things left are inviting finance
+> (needs their email addresses) and merging the website PR so the public page goes
+> live on nurengroup.com. Until the PR is merged, the page exists in the build but
+> isn't on production; once merged, it shows the "No announcements" empty state
+> until finance publishes the first one.
 
 ---
 
