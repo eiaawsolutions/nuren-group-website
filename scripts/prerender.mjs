@@ -25,6 +25,7 @@ const ROUTES = [
   '/ecosystem',
   '/products',
   '/investors',
+  '/investors/announcements',
   '/media-hub',
   '/investors/corporate-governance',
   '/investors/governance-documents',

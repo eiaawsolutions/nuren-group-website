@@ -386,7 +386,11 @@ app.use(helmet({
       styleSrc: ["'self'", "'unsafe-inline'"],
       imgSrc: ["'self'", 'data:', 'https:'],
       fontSrc: ["'self'", 'data:'],
-      connectSrc: ["'self'"],
+      // Investor announcements are fetched client-side from Sanity's cached read
+      // API (see src/data/announcements.ts). apicdn is the CDN endpoint we query;
+      // api.sanity.io covers the uncached fallback. PDF download links are
+      // navigations (not fetches), so they don't need a connect-src entry.
+      connectSrc: ["'self'", 'https://*.apicdn.sanity.io', 'https://*.api.sanity.io'],
       frameSrc: [
         "'self'",
         'https://www.youtube.com',
