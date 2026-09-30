@@ -1,27 +1,25 @@
-Hero landing slideshow images.
+Hero landing background video.
 
-Drop your 15 cinematic background images into this folder, named:
-  slide-01.jpeg
-  slide-02.jpeg
-  slide-03.jpeg
-  ...
-  slide-15.jpeg
+The landing page (/) plays:
+  hero_section_video.mp4
 
-Naming rules:
-- Lowercase "slide-" prefix.
-- Two-digit zero-padded index (slide-01, not slide-1) so file managers sort correctly.
-- .jpeg extension (must match exactly — .jpg will NOT be picked up).
-  To use .png or .webp, edit the file extension in
-  src/components/Hero/HeroLanding.tsx (the buildSlides function).
+To swap the video, replace that file (keep the same name), or change
+HERO_VIDEO_SRC at the top of src/components/Hero/HeroLanding.tsx.
+No imports to update — files in /public are served verbatim.
 
 Recommended specs:
-- Dimensions: 1920x1080 minimum (will be cover-cropped, so anything wider/taller is fine).
-- File size: aim for <250 KB per image (compress with squoosh.app or similar).
-  15 slides x 250 KB = ~3.75 MB total slideshow weight.
-- Format: JPEG with 80-85 quality, or WebP for ~30% smaller files.
-- Subject: keep important focal content roughly in the upper half — the
-  "NUREN GROUP" title and subtitle anchor to the lower 12-14vh.
+- Format: MP4, H.264 video codec (plays on every iOS and Android browser).
+  Avoid HEVC/H.265 or AV1 — not supported everywhere.
+- Resolution: 1920x1080 for crisp display on laptops/monitors
+  (the video is shown in full, never cropped, at every screen size).
+- File size: aim for under ~10 MB — it's committed to git and every
+  visitor downloads it.
+- Audio: none needed. The video always plays muted (browsers only allow
+  muted autoplay).
+- Export with "fast start" / "web optimized" enabled so playback begins
+  before the whole file has downloaded.
+- Keep important content away from the bottom ~20% — the "NUREN GROUP"
+  title, subtitle and Enter button sit there.
 
-To add or remove slides, just change SLIDE_COUNT at the top of
-src/components/Hero/HeroLanding.tsx and add/remove matching files here.
-No imports to update — files in /public are served verbatim.
+The slide-01.jpeg ... slide-15.jpeg files are the old slideshow images.
+They are kept for reference but are no longer shown on the hero page.

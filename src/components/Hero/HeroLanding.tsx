@@ -1,13 +1,30 @@
-import { useState, useEffect, useMemo } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { useEffect, useRef } from 'react';
+import type { VideoHTMLAttributes } from 'react';
+import { motion } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 
-const SLIDE_COUNT = 15;
-// Each slide holds steady on screen, then cross-fades into the next.
-// Slightly longer hold + longer fade gives a more cinematic, story-like pace.
-const SLIDE_DURATION_MS = 7000;
-const FADE_MS = 2000;
+// Background video served from public/hero/. The `#t=0.001` media fragment
+// nudges iOS Safari into painting the first frame even when it refuses to
+// autoplay (Low Power Mode), so the splash never sits on a blank rectangle.
+// The old slide-XX.jpeg files remain in public/hero/ but are no longer used.
+const HERO_VIDEO_SRC = '/hero/hero_section_video.mp4#t=0.001';
+
+// Shared by the backdrop and foreground <video>. Autoplay only works on
+// mobile when the video is muted AND inline (`playsInline` stops iOS from
+// forcing fullscreen). PiP / remote-playback are disabled so Chrome/Safari
+// don't overlay cast or picture-in-picture buttons on a decorative video.
+const VIDEO_PROPS: VideoHTMLAttributes<HTMLVideoElement> = {
+  src: HERO_VIDEO_SRC,
+  autoPlay: true,
+  muted: true,
+  loop: true,
+  playsInline: true,
+  preload: 'auto',
+  disablePictureInPicture: true,
+  disableRemotePlayback: true,
+  tabIndex: -1,
+};
 
 // Shared Enter button styling — used by both the desktop (absolute, cinematic
 // position) and mobile/tablet (stacked above title) Enter buttons so the
@@ -18,27 +35,46 @@ const ENTER_BTN_CLASS =
   'active:bg-[#ee5174] active:shadow-lg active:shadow-[#ee5174]/30 ' +
   'focus:outline-none focus-visible:ring-2 focus-visible:ring-[#ee5174]/60 transition-all';
 
-const buildSlides = (count: number): string[] =>
-  Array.from({ length: count }, (_, i) => `/hero/slide-${String(i + 1).padStart(2, '0')}.jpeg`);
-
 export const HeroLanding = () => {
-  const slides = useMemo(() => buildSlides(SLIDE_COUNT), []);
-  const [index, setIndex] = useState(0);
   const navigate = useNavigate();
+  const backdropRef = useRef<HTMLVideoElement>(null);
+  const foregroundRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
-    const id = window.setInterval(() => {
-      setIndex((i) => (i + 1) % slides.length);
-    }, SLIDE_DURATION_MS);
-    return () => window.clearInterval(id);
-  }, [slides.length]);
+    const videos = [backdropRef.current, foregroundRef.current].filter(
+      (v): v is HTMLVideoElement => v !== null,
+    );
 
-  // Warm the next image so the cross-fade isn't waiting on the network.
-  useEffect(() => {
-    const next = (index + 1) % slides.length;
-    const img = new Image();
-    img.src = slides[next];
-  }, [index, slides]);
+    // React sets `muted` as a DOM property only, never as an HTML attribute,
+    // so the prerendered HTML would otherwise ship an unmuted autoplay video
+    // — which every mobile browser blocks. Set property and attribute both.
+    videos.forEach((v) => {
+      v.muted = true;
+      v.defaultMuted = true;
+      v.setAttribute('muted', '');
+    });
+
+    // Honour the OS "reduce motion" setting: hold the first frame instead of
+    // looping. Re-evaluated live if the user flips the setting.
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const play = () => videos.forEach((v) => v.play().catch(() => {}));
+    const pause = () => videos.forEach((v) => v.pause());
+    const syncMotion = () => (reduceMotion.matches ? pause() : play());
+    syncMotion();
+
+    // Autoplay can still be refused (iOS Low Power Mode, Android Data Saver).
+    // Retry on the first tap/click anywhere so it starts as soon as the
+    // visitor interacts.
+    const retryPlay = () => {
+      if (!reduceMotion.matches) play();
+    };
+    window.addEventListener('pointerdown', retryPlay, { once: true });
+    reduceMotion.addEventListener('change', syncMotion);
+    return () => {
+      window.removeEventListener('pointerdown', retryPlay);
+      reduceMotion.removeEventListener('change', syncMotion);
+    };
+  }, []);
 
   const handleEnter = () => {
     navigate('/home');
@@ -58,54 +94,40 @@ export const HeroLanding = () => {
         />
         {/* Point search engines at the rich /home page so the splash doesn't dilute SEO. */}
         <link rel="canonical" href="https://nurengroup.com/home" />
-        <link rel="preload" as="image" href={slides[0]} />
+        {/* iOS paints the notch / home-indicator safe areas with the page
+            background in landscape — make it black here (instead of the
+            site-wide white) so no white bars flank the video. `!` is needed
+            because the global `body` rule in index.css is unlayered. Helmet
+            removes the class again when navigating to /home. */}
+        <body className="bg-black!" />
       </Helmet>
 
-      {/* Slideshow — each slide holds still and cross-fades into the next.
-          Two-layer technique so the full illustration is always visible at
-          every screen size (mobile included):
-            (1) Blurred copy with `cover` fills the viewport as ambient
-                backdrop, so portrait-phone empty bands don't read as dead
-                black space — they pick up the slide's dominant colors.
-            (2) Foreground with `contain` shows the entire illustration
-                without cropping, regardless of viewport aspect ratio. */}
-      <AnimatePresence mode="sync">
-        <motion.div
-          key={index}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: FADE_MS / 1000, ease: 'easeInOut' }}
-          className="absolute inset-0 w-full h-full"
-          aria-hidden="true"
-        >
-          {/* Blurred ambient backdrop — fills the viewport at every screen
-              size so the empty space around the contained foreground always
-              picks up the slide's mood instead of showing flat black. */}
-          <div
-            className="absolute inset-0 w-full h-full"
-            style={{
-              backgroundImage: `url(${slides[index]})`,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-              backgroundRepeat: 'no-repeat',
-              filter: 'blur(40px) brightness(0.7)',
-              transform: 'scale(1.15)',
-            }}
-          />
-          {/* Foreground — full illustration visible at every viewport. On
-              portrait phones the empty bands above/below are filled by the
-              blurred backdrop above, not flat black. */}
-          <div
-            className="absolute inset-0 w-full h-full bg-center bg-no-repeat bg-contain"
-            style={{ backgroundImage: `url(${slides[index]})` }}
-          />
-        </motion.div>
-      </AnimatePresence>
+      {/* Background video — same two-layer technique the slideshow used, so
+          the full frame is always visible at every aspect ratio (portrait
+          phones, fold screens, tablets, laptops, ultrawide monitors):
+            (1) Blurred `cover` copy fills the viewport as an ambient
+                backdrop, so letterbox bands pick up the video's colours
+                instead of reading as dead black space.
+            (2) `contain` foreground shows the entire frame, never cropped.
+          Purely decorative: hidden from assistive tech, and pointer events
+          are off so long-press doesn't open iOS/Android "save video" menus. */}
+      <div className="absolute inset-0 w-full h-full pointer-events-none" aria-hidden="true">
+        <video
+          ref={backdropRef}
+          {...VIDEO_PROPS}
+          className="absolute inset-0 w-full h-full object-cover"
+          style={{ filter: 'blur(40px) brightness(0.7)', transform: 'scale(1.15)' }}
+        />
+        <video
+          ref={foregroundRef}
+          {...VIDEO_PROPS}
+          className="absolute inset-0 w-full h-full object-contain"
+        />
+      </div>
 
       {/* Whisper-soft uniform dim — no visible "band" cutting across the
           composition. Just enough darkening to give the foreground text a
-          subtle contrast lift against bright slides. */}
+          subtle contrast lift against bright frames. */}
       <div className="absolute inset-0 bg-black/15 pointer-events-none" />
 
       {/* Foreground content. */}
@@ -113,7 +135,7 @@ export const HeroLanding = () => {
         {/* Desktop Enter button — absolute cinematic position high above the
             title. Only shown on lg+ (>=1024px); on smaller screens the button
             is rendered inside the title cluster below instead, so it sits
-            directly above the title and stays clear of the slideshow content. */}
+            directly above the title and stays clear of the video content. */}
         <div className="hidden lg:block absolute left-1/2 top-[68%] -translate-x-1/2 -translate-y-1/2">
           <motion.button
             onClick={handleEnter}
@@ -153,9 +175,12 @@ export const HeroLanding = () => {
               on narrow screens (mobile portrait) so the title fits on one line,
               and by viewport HEIGHT on short screens (laptop 1366x768) so it
               never grows tall enough to crash into the Enter button above it.
-              Whichever dimension is more constrained wins. Capped at 120pt so
+              Whichever dimension is more constrained wins. The floor is
+              min(28pt, 10vw) so ultra-narrow screens (fold cover displays,
+              ~280px wide) shrink below 28pt instead of clipping; phones
+              >=~370px wide still get the full 28pt floor. Capped at 120pt so
               ultrawide 4K monitors don't get an absurdly oversized title. */}
-          <h1 className="font-montserrat font-bold text-[#ee5174] tracking-tight text-center leading-none drop-shadow-[0_2px_8px_rgba(0,0,0,0.25)] px-6 text-[clamp(28pt,min(7.5vw,11vh),120pt)]">
+          <h1 className="font-montserrat font-bold text-[#ee5174] tracking-tight text-center leading-none drop-shadow-[0_2px_8px_rgba(0,0,0,0.25)] px-6 text-[clamp(min(28pt,10vw),min(7.5vw,11vh),120pt)]">
             NUREN GROUP
           </h1>
           {/* Subtitle row — w-full + parent has no horizontal padding, so the
