@@ -38,6 +38,18 @@ const HEADING_RE = /^\s*#{1,6}\s+(.*)$/;
 
 const text = (value: string): Inline => ({ type: 'text', text: value });
 
+/**
+ * While a reply is still streaming, its last **bold** may have arrived without
+ * its closing marker; drop that one opener so the visitor never sees a stray
+ * "**" flicker before the rest lands.
+ */
+export function hideUnclosedBold(text: string): string {
+  const markers = text.split('**').length - 1;
+  if (markers % 2 === 0) return text;
+  const last = text.lastIndexOf('**');
+  return text.slice(0, last) + text.slice(last + 2);
+}
+
 /** Allow only this site's paths, http(s) and mailto; everything else is dropped. */
 export function safeHref(href: string): { href: string; external: boolean } | null {
   const target = href.trim();

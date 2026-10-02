@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseRichText, safeHref } from './markdownLite';
+import { parseRichText, safeHref, hideUnclosedBold } from './markdownLite';
 
 const text = (value: string) => ({ type: 'text', text: value });
 
@@ -140,5 +140,19 @@ describe('safeHref', () => {
     expect(safeHref('javascript:alert(1)')).toBeNull();
     expect(safeHref('data:text/html,hi')).toBeNull();
     expect(safeHref('//evil.example')).toBeNull();
+  });
+});
+
+describe('hideUnclosedBold', () => {
+  it('hides a bold marker whose closing half has not streamed in yet', () => {
+    expect(hideUnclosedBold('Start with **New-mum sam')).toBe('Start with New-mum sam');
+  });
+
+  it('leaves complete bold text alone', () => {
+    expect(hideUnclosedBold('Start with **sampling** first')).toBe('Start with **sampling** first');
+  });
+
+  it('only hides the last, unmatched marker', () => {
+    expect(hideUnclosedBold('**KOL** and **samp')).toBe('**KOL** and samp');
   });
 });

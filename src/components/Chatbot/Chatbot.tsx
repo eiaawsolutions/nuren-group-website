@@ -1,22 +1,20 @@
 import { useState, useRef, useEffect } from 'react';
 import type { FormEvent, KeyboardEvent, ReactNode } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { MessageCircle, X, Send, Sparkles, CheckCircle2, Loader2, ArrowLeft } from 'lucide-react';
+import { MessageCircle, X, Send, Sparkles, CheckCircle2, Loader2, ArrowLeft, RotateCcw } from 'lucide-react';
 import { RichText } from './RichText';
-
-type Role = 'user' | 'model';
-interface ChatMessage {
-  role: Role;
-  text: string;
-  // Error notices shown in the chat but never sent back to the model as history.
-  local?: boolean;
-}
+import { readSse } from './sse';
+import { loadChat, saveChat, clearChat, sessionChatStore } from './chatStorage';
+import { buildTranscript, hasVisitorTurns } from './transcript';
+import { isLang } from './types';
+import type { ChatMessage, Lang } from './types';
 
 type View = 'chat' | 'form' | 'success';
-type Lang = 'en' | 'ms' | 'zh';
+type DraftStatus = 'idle' | 'loading' | 'ready' | 'failed';
 
 const INTRO_MESSAGE: ChatMessage = {
   role: 'model',
+  intro: true,
   text:
     "Hi, I'm Nura, Nuren Group's AI assistant. Whether you're planning a campaign to reach Malaysian mums or just looking around, I'm happy to help. You can chat with me in English, BM or 中文.",
 };
@@ -40,9 +38,8 @@ const CONNECTION_ERROR: Record<Lang, string> = {
   zh: '抱歉，刚才连接不上。请再试一次，或点击下方的 Talk to our team，我们的团队会联系你。',
 };
 
-const isLang = (value: unknown): value is Lang => value === 'en' || value === 'ms' || value === 'zh';
-
 const CHAT_ENDPOINT = '/api/chat';
+const BRIEF_ENDPOINT = '/api/chat/brief';
 const ENQUIRY_ENDPOINT = '/api/enquiry';
 
 interface FormState {
@@ -63,22 +60,49 @@ const EMPTY_FORM: FormState = {
   website: '',
 };
 
+/** The turns Nura should see: no greeting, error notices or half-streamed reply. */
+const toHistory = (messages: ChatMessage[]) =>
+  messages
+    .filter((m) => !m.intro && !m.local && !m.streaming)
+    .slice(-HISTORY_LIMIT)
+    .map(({ role, text }) => ({ role, text }));
+
+const countVisitorTurns = (messages: ChatMessage[]) => messages.filter((m) => m.role === 'user' && !m.local).length;
+
+const parseEventData = (data: string): Record<string, unknown> => {
+  try {
+    return JSON.parse(data);
+  } catch {
+    return {};
+  }
+};
+
 export const Chatbot = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [view, setView] = useState<View>('chat');
-  const [messages, setMessages] = useState<ChatMessage[]>([INTRO_MESSAGE]);
+  // Restore the conversation from this tab's session, so closing the panel or
+  // reloading the page doesn't make Nura forget what the visitor said.
+  const [restored] = useState(() => loadChat(sessionChatStore()));
+  const [messages, setMessages] = useState<ChatMessage[]>(() => [INTRO_MESSAGE, ...(restored?.messages ?? [])]);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   // Last reply language reported by the server, for client-side error copy.
-  const lastLang = useRef<Lang>('en');
+  const lastLang = useRef<Lang>(restored?.lang ?? 'en');
+  // The in-flight reply, so "start a new chat" can stop it.
+  const inflight = useRef<AbortController | null>(null);
 
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [draft, setDraft] = useState<{ status: DraftStatus; turns: number }>({ status: 'idle', turns: 0 });
+  const [includeChat, setIncludeChat] = useState(true);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  const isStreaming = messages.some((m) => m.streaming);
+  const visitorTurns = countVisitorTurns(messages);
 
   useEffect(() => {
     if (view === 'chat' && scrollRef.current) {
@@ -92,44 +116,78 @@ export const Chatbot = () => {
     }
   }, [isOpen, view]);
 
+  useEffect(() => {
+    // Save settled conversations only; a reply mid-stream is saved once it lands.
+    if (!isStreaming) saveChat(sessionChatStore(), { messages, lang: lastLang.current });
+  }, [messages, isStreaming]);
+
+  useEffect(() => () => inflight.current?.abort(), []);
+
   const sendMessage = async (text: string) => {
     const trimmed = text.trim();
     if (!trimmed || sending) return;
 
-    const newMessages: ChatMessage[] = [...messages, { role: 'user', text: trimmed }];
-    setMessages(newMessages);
+    const history = toHistory(messages);
+    setMessages((prev) => [...prev, { role: 'user', text: trimmed }]);
     setInput('');
     setSending(true);
     const fallbackLang: Lang = /[一-鿿]/.test(trimmed) ? 'zh' : lastLang.current;
-    const addNotice = (text: string) =>
-      setMessages((prev) => [...prev, { role: 'model', text, local: true }]);
+    const controller = new AbortController();
+    inflight.current = controller;
+
+    const showStreamed = (streamed: string) =>
+      setMessages((prev) => [...prev.filter((m) => !m.streaming), { role: 'model', text: streamed, streaming: true }]);
+    // Replace the in-progress reply (if any) with the final text or a notice.
+    const settle = (final: ChatMessage) => setMessages((prev) => [...prev.filter((m) => !m.streaming), final]);
+    const notice = (error: unknown): ChatMessage => ({
+      role: 'model',
+      text: typeof error === 'string' && error ? error : CONNECTION_ERROR[fallbackLang],
+      local: true,
+    });
 
     try {
-      const history = newMessages
-        .filter((m) => m !== INTRO_MESSAGE && !m.local)
-        .slice(0, -1)
-        .slice(-HISTORY_LIMIT)
-        .map(({ role, text: turnText }) => ({ role, text: turnText }));
-
       const res = await fetch(CHAT_ENDPOINT, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream' },
         body: JSON.stringify({ message: trimmed, history }),
+        signal: controller.signal,
       });
 
-      const data = await res.json().catch(() => ({}));
-      if (isLang(data.lang)) lastLang.current = data.lang;
-      if (!res.ok) {
-        // The server localises its own errors; fall back if it sent none.
-        addNotice(data.error || CONNECTION_ERROR[fallbackLang]);
+      const streamed = res.ok && res.body && (res.headers.get('content-type') ?? '').includes('text/event-stream');
+      if (!streamed) {
+        // Errors before the reply starts (rate limit, validation) come back as JSON.
+        const data = await res.json().catch(() => ({}));
+        if (isLang(data.lang)) lastLang.current = data.lang;
+        settle(res.ok && data.reply ? { role: 'model', text: data.reply } : notice(data.error));
         return;
       }
 
-      setMessages((prev) => [...prev, { role: 'model', text: data.reply || '…' }]);
+      let text = '';
+      let settled = false;
+      for await (const { event, data } of readSse(res.body!)) {
+        const payload = parseEventData(data);
+        if (isLang(payload.lang)) lastLang.current = payload.lang;
+        if (event === 'delta' && typeof payload.text === 'string') {
+          text += payload.text;
+          showStreamed(text);
+        } else if (event === 'done') {
+          // The server's final text wins: it may be trimmed or replaced.
+          settle({ role: 'model', text: (typeof payload.reply === 'string' && payload.reply) || text || '…' });
+          settled = true;
+        } else if (event === 'error') {
+          settle(notice(payload.error));
+          settled = true;
+        }
+      }
+      if (!settled) settle(notice(null));
     } catch {
-      addNotice(CONNECTION_ERROR[fallbackLang]);
+      // Aborted because the visitor started a new chat: nothing to show.
+      if (!controller.signal.aborted) settle(notice(null));
     } finally {
-      setSending(false);
+      if (inflight.current === controller) {
+        inflight.current = null;
+        setSending(false);
+      }
     }
   };
 
@@ -145,10 +203,48 @@ export const Chatbot = () => {
     }
   };
 
+  const startNewChat = () => {
+    inflight.current?.abort();
+    inflight.current = null;
+    setSending(false);
+    setMessages([INTRO_MESSAGE]);
+    clearChat(sessionChatStore());
+    // Same visitor, new conversation: keep their contact details, drop the draft.
+    setForm((f) => ({ ...f, topic: '', description: '' }));
+    setDraft({ status: 'idle', turns: 0 });
+    setIncludeChat(true);
+    inputRef.current?.focus();
+  };
+
+  // Drafts the topic and description from the chat so the visitor doesn't
+  // retype what they already told Nura. Only fills fields that are still empty.
+  const draftFromChat = async () => {
+    setDraft({ status: 'loading', turns: visitorTurns });
+    try {
+      const res = await fetch(BRIEF_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ history: buildTranscript(messages) }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || typeof data.topic !== 'string' || typeof data.description !== 'string') throw new Error('no draft');
+      setForm((f) => ({
+        ...f,
+        topic: f.topic.trim() ? f.topic : data.topic,
+        description: f.description.trim() ? f.description : data.description,
+      }));
+      setDraft({ status: 'ready', turns: visitorTurns });
+    } catch {
+      setDraft({ status: 'failed', turns: visitorTurns });
+    }
+  };
+
   const openEnquiry = () => {
     setSubmitError(null);
     setFormErrors({});
     setView('form');
+    const nothingTyped = !form.topic.trim() && !form.description.trim();
+    if (visitorTurns > 0 && visitorTurns !== draft.turns && nothingTyped) void draftFromChat();
   };
 
   const validateForm = (): boolean => {
@@ -171,10 +267,11 @@ export const Chatbot = () => {
 
     setSubmitting(true);
     try {
+      const transcript = includeChat ? buildTranscript(messages) : [];
       const res = await fetch(ENQUIRY_ENDPOINT, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, ...(transcript.length ? { transcript } : {}) }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -183,6 +280,7 @@ export const Chatbot = () => {
       }
       setView('success');
       setForm(EMPTY_FORM);
+      setDraft({ status: 'idle', turns: visitorTurns });
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : 'Something went wrong.');
     } finally {
@@ -190,15 +288,10 @@ export const Chatbot = () => {
     }
   };
 
-  const resetAndClose = () => {
+  // Closing only hides the panel; the conversation stays for when they come back.
+  const closePanel = () => {
     setIsOpen(false);
-    setTimeout(() => {
-      setView('chat');
-      setMessages([INTRO_MESSAGE]);
-      setForm(EMPTY_FORM);
-      setFormErrors({});
-      setSubmitError(null);
-    }, 300);
+    setTimeout(() => setView('chat'), 300);
   };
 
   return (
@@ -263,8 +356,18 @@ export const Chatbot = () => {
                     : 'Nuren Group • AI assistant'}
                 </div>
               </div>
+              {view === 'chat' && visitorTurns > 0 && (
+                <button
+                  onClick={startNewChat}
+                  aria-label="Start a new chat"
+                  title="Start a new chat"
+                  className="p-2 rounded-full hover:bg-white/20 transition-colors"
+                >
+                  <RotateCcw size={17} />
+                </button>
+              )}
               <button
-                onClick={resetAndClose}
+                onClick={closePanel}
                 aria-label="Close chat"
                 className="p-2 rounded-full hover:bg-white/20 transition-colors"
               >
@@ -284,7 +387,10 @@ export const Chatbot = () => {
                 >
                   {messages.map((m, i) => (
                     <div
-                      key={i}
+                      // The streaming bubble gets its own key so the finished reply mounts
+                      // as a new node: screen readers announce it once, not every token.
+                      key={m.streaming ? 'streaming' : i}
+                      aria-hidden={m.streaming || undefined}
                       className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
                     >
                       <div
@@ -295,11 +401,11 @@ export const Chatbot = () => {
                         }`}
                       >
                         <span className="sr-only">{m.role === 'user' ? 'You: ' : 'Nura: '}</span>
-                        {m.role === 'user' ? m.text : <RichText text={m.text} />}
+                        {m.role === 'user' ? m.text : <RichText text={m.text} streaming={m.streaming} />}
                       </div>
                     </div>
                   ))}
-                  {sending && (
+                  {sending && !isStreaming && (
                     <div className="flex justify-start">
                       <div className="bg-white border border-slate-200 rounded-2xl rounded-bl-md px-4 py-3 shadow-sm">
                         <div className="flex gap-1">
@@ -367,6 +473,17 @@ export const Chatbot = () => {
                 <p className="text-sm text-slate-600">
                   Share a few details and our team will get back to you.
                 </p>
+                {draft.status === 'loading' && (
+                  <p className="flex items-center gap-2 text-xs text-slate-500" role="status">
+                    <Loader2 size={14} className="animate-spin flex-shrink-0" />
+                    Filling in the details from our chat…
+                  </p>
+                )}
+                {draft.status === 'ready' && (
+                  <p className="text-xs text-slate-500" role="status">
+                    We've filled in the topic and description from your chat. Edit anything before you send.
+                  </p>
+                )}
 
                 <Field label="Name" error={formErrors.name}>
                   <input
@@ -417,12 +534,25 @@ export const Chatbot = () => {
                   <textarea
                     value={form.description}
                     onChange={(e) => setForm({ ...form, description: e.target.value })}
-                    rows={4}
+                    rows={draft.status === 'ready' ? 6 : 4}
                     className={inputCls(!!formErrors.description) + ' resize-none'}
                     placeholder="Tell us a little about what you're looking for."
                     disabled={submitting}
                   />
                 </Field>
+
+                {hasVisitorTurns(messages) && (
+                  <label className="flex items-start gap-2.5 text-xs text-slate-600 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={includeChat}
+                      onChange={(e) => setIncludeChat(e.target.checked)}
+                      className="mt-0.5 h-4 w-4 flex-shrink-0 accent-nuren-pink"
+                      disabled={submitting}
+                    />
+                    <span>Include my chat with Nura so the team has the full picture.</span>
+                  </label>
+                )}
 
                 {/* Honeypot */}
                 <div className="hidden" aria-hidden="true">
@@ -488,7 +618,7 @@ export const Chatbot = () => {
                     Back to chat
                   </button>
                   <button
-                    onClick={resetAndClose}
+                    onClick={closePanel}
                     className="w-full py-2.5 rounded-full bg-white border border-slate-200 text-slate-700 font-semibold text-sm hover:bg-slate-100 transition-colors"
                   >
                     Close

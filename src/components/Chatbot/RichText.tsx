@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { parseRichText } from './markdownLite';
+import { parseRichText, hideUnclosedBold } from './markdownLite';
 import type { Inline } from './markdownLite';
 
 const LINK_CLS = 'font-medium text-nuren-pink underline underline-offset-2 hover:text-nuren-purple';
@@ -32,8 +32,8 @@ function renderInline(nodes: Inline[], keyPrefix: string): ReactNode[] {
 }
 
 /** Renders one of Nura's replies: paragraphs, lists, bold and safe links. */
-export const RichText = ({ text }: { text: string }) => {
-  const blocks = useMemo(() => parseRichText(text), [text]);
+export const RichText = ({ text, streaming = false }: { text: string; streaming?: boolean }) => {
+  const blocks = useMemo(() => parseRichText(streaming ? hideUnclosedBold(text) : text), [text, streaming]);
   return (
     <div className="space-y-2">
       {blocks.map((block, i) => {
