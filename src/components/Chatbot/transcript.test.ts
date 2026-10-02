@@ -3,14 +3,13 @@ import { buildTranscript, hasVisitorTurns } from './transcript';
 import { TRANSCRIPT_LIMITS } from '../../../server/nura/transcript.js';
 
 describe('buildTranscript', () => {
-  it('keeps the real conversation and drops notices and half-streamed replies', () => {
+  it('keeps the real conversation and drops the greeting and error notices', () => {
     expect(
       buildTranscript([
         { role: 'model', text: 'Hi, I am Nura', intro: true },
         { role: 'user', text: 'We sell baby wipes' },
         { role: 'model', text: 'Sorry, connection lost', local: true },
         { role: 'model', text: 'Great! KOL could work.' },
-        { role: 'model', text: 'Typing…', streaming: true },
       ]),
     ).toEqual([
       { role: 'user', text: 'We sell baby wipes' },

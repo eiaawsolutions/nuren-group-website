@@ -6,8 +6,9 @@ import { RichText } from './RichText';
 import { readSse } from './sse';
 import { loadChat, saveChat, clearChat, sessionChatStore } from './chatStorage';
 import { buildTranscript, hasVisitorTurns } from './transcript';
-import { isLang } from './types';
-import type { ChatMessage, Lang } from './types';
+import { splitIntoBubbles, typingDelayMs } from './pacing';
+import { isLang, toOptions } from './types';
+import type { ChatMessage, Lang, Role } from './types';
 
 type View = 'chat' | 'form' | 'success';
 type DraftStatus = 'idle' | 'loading' | 'ready' | 'failed';
@@ -60,12 +61,18 @@ const EMPTY_FORM: FormState = {
   website: '',
 };
 
-/** The turns Nura should see: no greeting, error notices or half-streamed reply. */
-const toHistory = (messages: ChatMessage[]) =>
-  messages
-    .filter((m) => !m.intro && !m.local && !m.streaming)
-    .slice(-HISTORY_LIMIT)
-    .map(({ role, text }) => ({ role, text }));
+/** The turns Nura should see: no greeting or error notices. */
+const toHistory = (messages: ChatMessage[]) => {
+  const turns: { role: Role; text: string }[] = [];
+  for (const m of messages) {
+    if (m.intro || m.local) continue;
+    const last = turns.at(-1);
+    // A reply shown as several bubbles is still one turn for Nura.
+    if (last && last.role === 'model' && m.role === 'model') last.text += `\n\n${m.text}`;
+    else turns.push({ role: m.role, text: m.text });
+  }
+  return turns.slice(-HISTORY_LIMIT);
+};
 
 const countVisitorTurns = (messages: ChatMessage[]) => messages.filter((m) => m.role === 'user' && !m.local).length;
 
@@ -76,6 +83,21 @@ const parseEventData = (data: string): Record<string, unknown> => {
     return {};
   }
 };
+
+/** Wait, but finish early if the reply is abandoned (new chat or unmount). */
+const pause = (ms: number, signal: AbortSignal) =>
+  new Promise<void>((resolve) => {
+    if (ms <= 0 || signal.aborted) return resolve();
+    const timer = setTimeout(resolve, ms);
+    signal.addEventListener(
+      'abort',
+      () => {
+        clearTimeout(timer);
+        resolve();
+      },
+      { once: true },
+    );
+  });
 
 export const Chatbot = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -101,8 +123,11 @@ export const Chatbot = () => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  const isStreaming = messages.some((m) => m.streaming);
   const visitorTurns = countVisitorTurns(messages);
+  const lastMessage = messages.at(-1);
+  // Tappable next steps from Nura's latest reply, hidden while a reply is on its way.
+  const nextSteps =
+    !sending && lastMessage?.role === 'model' && !lastMessage.local ? (lastMessage.options ?? []) : [];
 
   useEffect(() => {
     if (view === 'chat' && scrollRef.current) {
@@ -117,9 +142,8 @@ export const Chatbot = () => {
   }, [isOpen, view]);
 
   useEffect(() => {
-    // Save settled conversations only; a reply mid-stream is saved once it lands.
-    if (!isStreaming) saveChat(sessionChatStore(), { messages, lang: lastLang.current });
-  }, [messages, isStreaming]);
+    saveChat(sessionChatStore(), { messages, lang: lastLang.current });
+  }, [messages]);
 
   useEffect(() => () => inflight.current?.abort(), []);
 
@@ -131,19 +155,32 @@ export const Chatbot = () => {
     setMessages((prev) => [...prev, { role: 'user', text: trimmed }]);
     setInput('');
     setSending(true);
+    const sentAt = Date.now();
     const fallbackLang: Lang = /[一-鿿]/.test(trimmed) ? 'zh' : lastLang.current;
     const controller = new AbortController();
     inflight.current = controller;
 
-    const showStreamed = (streamed: string) =>
-      setMessages((prev) => [...prev.filter((m) => !m.streaming), { role: 'model', text: streamed, streaming: true }]);
-    // Replace the in-progress reply (if any) with the final text or a notice.
-    const settle = (final: ChatMessage) => setMessages((prev) => [...prev.filter((m) => !m.streaming), final]);
-    const notice = (error: unknown): ChatMessage => ({
-      role: 'model',
-      text: typeof error === 'string' && error ? error : CONNECTION_ERROR[fallbackLang],
-      local: true,
-    });
+    const addNotice = (error: unknown) =>
+      setMessages((prev) => [
+        ...prev,
+        { role: 'model', text: typeof error === 'string' && error ? error : CONNECTION_ERROR[fallbackLang], local: true },
+      ]);
+
+    // Show the reply the way a person sends it: "typing…" for a moment that
+    // grows with the message, longer answers as a couple of short messages,
+    // and the next-step options on the last one. The first pause overlaps the
+    // time already spent waiting for the server. The pause applies to everyone:
+    // "reduce motion" (on by default on many Windows machines) only stills the
+    // typing dots, it doesn't make replies instant.
+    const deliver = async (reply: string, options: string[]) => {
+      const bubbles = splitIntoBubbles(reply);
+      for (const [i, bubble] of bubbles.entries()) {
+        await pause(typingDelayMs(bubble) - (i === 0 ? Date.now() - sentAt : 0), controller.signal);
+        if (controller.signal.aborted) return;
+        const isLast = i === bubbles.length - 1;
+        setMessages((prev) => [...prev, { role: 'model', text: bubble, ...(isLast && options.length ? { options } : {}) }]);
+      }
+    };
 
     try {
       const res = await fetch(CHAT_ENDPOINT, {
@@ -153,36 +190,29 @@ export const Chatbot = () => {
         signal: controller.signal,
       });
 
-      const streamed = res.ok && res.body && (res.headers.get('content-type') ?? '').includes('text/event-stream');
-      if (!streamed) {
+      let result: { reply?: string; options?: string[]; error?: unknown } = {};
+      if (res.ok && res.body && (res.headers.get('content-type') ?? '').includes('text/event-stream')) {
+        for await (const { event, data } of readSse(res.body)) {
+          const payload = parseEventData(data);
+          if (isLang(payload.lang)) lastLang.current = payload.lang;
+          if (event === 'done' && typeof payload.reply === 'string') {
+            result = { reply: payload.reply, options: toOptions(payload.options) };
+          } else if (event === 'error') {
+            result = { error: payload.error };
+          }
+        }
+      } else {
         // Errors before the reply starts (rate limit, validation) come back as JSON.
         const data = await res.json().catch(() => ({}));
         if (isLang(data.lang)) lastLang.current = data.lang;
-        settle(res.ok && data.reply ? { role: 'model', text: data.reply } : notice(data.error));
-        return;
+        result = res.ok && data.reply ? { reply: data.reply, options: toOptions(data.options) } : { error: data.error };
       }
 
-      let text = '';
-      let settled = false;
-      for await (const { event, data } of readSse(res.body!)) {
-        const payload = parseEventData(data);
-        if (isLang(payload.lang)) lastLang.current = payload.lang;
-        if (event === 'delta' && typeof payload.text === 'string') {
-          text += payload.text;
-          showStreamed(text);
-        } else if (event === 'done') {
-          // The server's final text wins: it may be trimmed or replaced.
-          settle({ role: 'model', text: (typeof payload.reply === 'string' && payload.reply) || text || '…' });
-          settled = true;
-        } else if (event === 'error') {
-          settle(notice(payload.error));
-          settled = true;
-        }
-      }
-      if (!settled) settle(notice(null));
+      if (result.reply) await deliver(result.reply, result.options ?? []);
+      else if (!controller.signal.aborted) addNotice(result.error);
     } catch {
       // Aborted because the visitor started a new chat: nothing to show.
-      if (!controller.signal.aborted) settle(notice(null));
+      if (!controller.signal.aborted) addNotice(null);
     } finally {
       if (inflight.current === controller) {
         inflight.current = null;
@@ -387,10 +417,7 @@ export const Chatbot = () => {
                 >
                   {messages.map((m, i) => (
                     <div
-                      // The streaming bubble gets its own key so the finished reply mounts
-                      // as a new node: screen readers announce it once, not every token.
-                      key={m.streaming ? 'streaming' : i}
-                      aria-hidden={m.streaming || undefined}
+                      key={i}
                       className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
                     >
                       <div
@@ -401,17 +428,31 @@ export const Chatbot = () => {
                         }`}
                       >
                         <span className="sr-only">{m.role === 'user' ? 'You: ' : 'Nura: '}</span>
-                        {m.role === 'user' ? m.text : <RichText text={m.text} streaming={m.streaming} />}
+                        {m.role === 'user' ? m.text : <RichText text={m.text} />}
                       </div>
                     </div>
                   ))}
-                  {sending && !isStreaming && (
+                  {nextSteps.length > 0 && (
+                    <div className="flex flex-wrap gap-2 pl-1" role="group" aria-label="Suggested replies">
+                      {nextSteps.map((option) => (
+                        <button
+                          key={option}
+                          onClick={() => sendMessage(option)}
+                          className="text-sm px-3.5 py-1.5 rounded-full bg-white border border-nuren-pink/40 text-nuren-pink hover:bg-nuren-pink hover:text-white transition-colors"
+                        >
+                          {option}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {sending && (
                     <div className="flex justify-start">
                       <div className="bg-white border border-slate-200 rounded-2xl rounded-bl-md px-4 py-3 shadow-sm">
-                        <div className="flex gap-1">
-                          <span className="h-2 w-2 bg-nuren-pink rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
-                          <span className="h-2 w-2 bg-nuren-pink rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
-                          <span className="h-2 w-2 bg-nuren-pink rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+                        <span className="sr-only">Nura is typing</span>
+                        <div className="flex gap-1" aria-hidden="true">
+                          <span className="h-2 w-2 bg-nuren-pink rounded-full motion-safe:animate-bounce" style={{ animationDelay: '0ms' }}></span>
+                          <span className="h-2 w-2 bg-nuren-pink rounded-full motion-safe:animate-bounce" style={{ animationDelay: '150ms' }}></span>
+                          <span className="h-2 w-2 bg-nuren-pink rounded-full motion-safe:animate-bounce" style={{ animationDelay: '300ms' }}></span>
                         </div>
                       </div>
                     </div>

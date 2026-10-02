@@ -4,11 +4,9 @@
 import { sanitizeTranscript } from '../../../server/nura/transcript.js';
 import type { ChatMessage } from './types';
 
-/** Visitor and Nura turns only: no greeting, error notices or half-streamed replies. */
+/** Visitor and Nura turns only: no greeting or error notices. */
 export function buildTranscript(messages: ChatMessage[]) {
-  return sanitizeTranscript(
-    messages.filter((m) => !m.intro && !m.local && !m.streaming).map(({ role, text }) => ({ role, text })),
-  );
+  return sanitizeTranscript(messages.filter((m) => !m.intro && !m.local).map(({ role, text }) => ({ role, text })));
 }
 
 export const hasVisitorTurns = (messages: ChatMessage[]) => messages.some((m) => m.role === 'user' && !m.local);

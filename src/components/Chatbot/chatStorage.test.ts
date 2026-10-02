@@ -39,16 +39,23 @@ describe('chat storage', () => {
     expect(loadChat(storage)).toEqual({ messages, lang: 'ms' });
   });
 
-  it('never stores a reply that is still streaming', () => {
+  it("keeps a reply's next-step options so they come back after a reload", () => {
     const storage = new MemoryStorage();
-    saveChat(storage, {
-      messages: [
-        { role: 'user', text: 'Hi' },
-        { role: 'model', text: 'Hel', streaming: true },
-      ],
-      lang: 'en',
-    });
-    expect(loadChat(storage)?.messages).toEqual([{ role: 'user', text: 'Hi' }]);
+    const messages = [
+      { role: 'user' as const, text: 'We sell diapers' },
+      { role: 'model' as const, text: 'Sampling works well.', options: ['How does sampling work?', 'Show me a plan'] },
+    ];
+    saveChat(storage, { messages, lang: 'en' });
+    expect(loadChat(storage)?.messages).toEqual(messages);
+  });
+
+  it('drops tampered options', () => {
+    const storage = new MemoryStorage();
+    storage.setItem(
+      CHAT_STORAGE_KEY,
+      JSON.stringify({ messages: [{ role: 'model', text: 'Hi', options: ['Ok', 5, '', 'x'.repeat(100), 'A', 'B', 'C'] }], lang: 'en' }),
+    );
+    expect(loadChat(storage)?.messages).toEqual([{ role: 'model', text: 'Hi', options: ['Ok', 'A', 'B'] }]);
   });
 
   it('keeps only the most recent messages', () => {

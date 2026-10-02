@@ -2,7 +2,7 @@
 // sessionStorage, not localStorage: the chat survives within this browser tab
 // and is forgotten when the tab closes, which is kinder on shared computers
 // for a chat that may contain names, budgets or phone numbers.
-import { isLang } from './types';
+import { isLang, toOptions } from './types';
 import type { ChatMessage, Lang } from './types';
 
 export const CHAT_STORAGE_KEY = 'nura:chat:v1';
@@ -26,8 +26,11 @@ export function sessionChatStore(): ChatStore | null {
 }
 
 function toStored(message: ChatMessage): ChatMessage {
-  const text = message.text.slice(0, MAX_STORED_CHARS);
-  return message.local ? { role: message.role, text, local: true } : { role: message.role, text };
+  const stored: ChatMessage = { role: message.role, text: message.text.slice(0, MAX_STORED_CHARS) };
+  if (message.local) stored.local = true;
+  const options = toOptions(message.options);
+  if (options.length) stored.options = options;
+  return stored;
 }
 
 const isStorable = (value: unknown): value is ChatMessage => {
@@ -53,7 +56,7 @@ export function loadChat(store: ChatStore | null): StoredChat | null {
 export function saveChat(store: ChatStore | null, chat: StoredChat): void {
   if (!store) return;
   const messages = chat.messages
-    .filter((m) => !m.intro && !m.streaming)
+    .filter((m) => !m.intro)
     .map(toStored)
     .slice(-MAX_STORED_MESSAGES);
   try {
