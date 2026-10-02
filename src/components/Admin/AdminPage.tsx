@@ -8,10 +8,38 @@ interface Status {
     enquiryFromEmail: string;
     enquiryRecipient: string;
     chatModel: string;
+    chatModelKey: string;
+    chatEffort: string | null;
+    promptVersion: string;
   };
   knowledgeBase: string;
+  usage: NuraUsage;
   counts: { enquiries: number; errors: number };
 }
+
+// Running totals from server/nura/usage.js, reset on every deploy/restart.
+interface NuraUsage {
+  since: string;
+  requests: number;
+  errors: number;
+  aborted: number;
+  truncated: number;
+  inputTokens: number;
+  outputTokens: number;
+  cacheReadTokens: number;
+  cacheWriteTokens: number;
+  estimatedCostUsd: number;
+  avgLatencyMs: number;
+  cacheReadRatio: number;
+  byRoute: Record<string, number>;
+  byLang: Record<string, number>;
+}
+
+const formatCount = (n: number) => n.toLocaleString('en-MY');
+const formatBreakdown = (counts: Record<string, number>) =>
+  Object.entries(counts)
+    .map(([key, n]) => `${key} ${formatCount(n)}`)
+    .join(' · ') || '—';
 
 interface EnquiryEntry {
   ts: string;
@@ -19,6 +47,8 @@ interface EnquiryEntry {
   emailHash: string;
   topic: string;
   descriptionPreview: string;
+  // Messages from the Nura chat attached to the email (0 if none); older entries lack it.
+  chatTurns?: number;
   delivery: string;
 }
 
@@ -225,6 +255,38 @@ export function AdminPage() {
               <SettingRow label="Enquiry sender" value={status.settings.enquiryFromEmail} ok />
               <SettingRow label="Enquiry recipient" value={status.settings.enquiryRecipient} ok />
               <SettingRow label="Chat model" value={status.settings.chatModel} ok />
+              <SettingRow
+                label="Model key · effort · prompt version"
+                value={`NURA_MODEL=${status.settings.chatModelKey} · ${status.settings.chatEffort ?? 'n/a'} · ${status.settings.promptVersion}`}
+                ok
+              />
+            </section>
+
+            <section className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+              <div className="flex items-baseline justify-between gap-4 mb-4">
+                <h2 className="text-base font-semibold">Nura usage</h2>
+                <span className="text-xs text-slate-500">
+                  Since {new Date(status.usage.since).toLocaleString('en-MY')} (resets on deploy)
+                </span>
+              </div>
+              <dl className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <UsageStat label="Model calls" value={formatCount(status.usage.requests)} />
+                <UsageStat label="Est. cost (USD)" value={`$${status.usage.estimatedCostUsd.toFixed(4)}`} />
+                <UsageStat label="Avg latency" value={`${formatCount(status.usage.avgLatencyMs)} ms`} />
+                <UsageStat label="Input from cache" value={`${Math.round(status.usage.cacheReadRatio * 100)}%`} />
+                <UsageStat label="Input tokens (uncached)" value={formatCount(status.usage.inputTokens)} />
+                <UsageStat label="Output tokens" value={formatCount(status.usage.outputTokens)} />
+                <UsageStat label="Cache read / write" value={`${formatCount(status.usage.cacheReadTokens)} / ${formatCount(status.usage.cacheWriteTokens)}`} />
+                <UsageStat
+                  label="Errors · cut off · left early"
+                  value={`${status.usage.errors} · ${status.usage.truncated} · ${status.usage.aborted}`}
+                  warn={status.usage.errors > 0 || status.usage.truncated > 0}
+                />
+              </dl>
+              <p className="mt-4 text-xs text-slate-500">
+                By route: {formatBreakdown(status.usage.byRoute)} &nbsp;|&nbsp; By language: {formatBreakdown(status.usage.byLang)}.
+                Costs are estimates from list prices; the Anthropic Console has the billed amounts.
+              </p>
             </section>
 
             <section className="bg-slate-900 border border-slate-800 rounded-xl p-6">
@@ -304,6 +366,9 @@ export function AdminPage() {
                     </div>
                     <div className="mt-2 text-sm text-slate-300"><strong className="text-slate-400">Topic:</strong> {e.topic}</div>
                     <div className="mt-1 text-sm text-slate-400">{e.descriptionPreview}{e.descriptionPreview.length >= 80 && '…'}</div>
+                    {!!e.chatTurns && (
+                      <div className="mt-1 text-xs text-slate-500">Nura chat attached ({e.chatTurns} messages)</div>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -329,6 +394,15 @@ export function AdminPage() {
           </div>
         )}
       </main>
+    </div>
+  );
+}
+
+function UsageStat({ label, value, warn = false }: { label: string; value: string; warn?: boolean }) {
+  return (
+    <div>
+      <dt className="text-xs uppercase tracking-wide text-slate-500">{label}</dt>
+      <dd className={`mt-1 text-sm font-mono ${warn ? 'text-amber-400' : 'text-slate-200'}`}>{value}</dd>
     </div>
   );
 }
