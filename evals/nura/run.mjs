@@ -56,19 +56,39 @@ export function replyLanguage(text) {
   return bm > en ? 'ms' : 'en';
 }
 
+// Replies longer than this stop feeling like chat messages.
+const MAX_REPLY_CHARS = 650;
+
 function globalProblems(reply) {
   const problems = [];
   if (!reply.trim()) problems.push('empty reply');
   if (/^\s*#{1,6}\s/m.test(reply)) problems.push('uses a markdown heading');
   if (/^\s*\|.*\|\s*$/m.test(reply)) problems.push('uses a table');
-  if (reply.length > 1200) problems.push(`very long reply (${reply.length} chars)`);
+  if (reply.length > MAX_REPLY_CHARS) problems.push(`long reply (${reply.length} chars)`);
+  // Petrina's feedback (Oct 2026): these read as scripted, AI-written chat.
+  if (/—/.test(reply)) problems.push('uses an em dash');
+  if (/\S \/ \S/.test(reply)) problems.push('uses " / " between words');
+  if (/<<\s*options/i.test(reply)) problems.push('options marker leaked into the reply');
+  const questions = (reply.match(/[?？]/g) ?? []).length;
+  if (questions > 1) problems.push(`asks ${questions} questions`);
+  const opener = reply.trim().split(/(?<=[.!?。！？])/)[0];
+  if (/[!！]$/.test(opener)) problems.push(`opens with an exclamation ("${opener.slice(0, 40)}")`);
   return problems;
 }
 
-export function grade(testCase, replies) {
+/**
+ * @param {object} testCase
+ * @param {string[]} replies - Nura's reply for each turn
+ * @param {string[][]} [options] - tappable options returned with each reply
+ */
+export function grade(testCase, replies, options = []) {
   const failures = [];
   const final = replies.at(-1) ?? '';
   replies.forEach((reply, i) => globalProblems(reply).forEach((p) => failures.push(`turn ${i + 1}: ${p}`)));
+  if (testCase.options) {
+    const count = (options.at(-1) ?? []).length;
+    if (count < 2 || count > 3) failures.push(`final reply offers ${count} options (want 2–3)`);
+  }
 
   if (testCase.lang && replyLanguage(final) !== testCase.lang) {
     failures.push(`expected ${testCase.lang} reply, got ${replyLanguage(final)}`);
@@ -95,6 +115,7 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 async function runConversation(testCase, args) {
   const history = [];
   const replies = [];
+  const options = [];
   const transcript = [];
   for (const turn of testCase.turns) {
     const res = await fetch(new URL('/api/chat', args.baseUrl), {
@@ -106,11 +127,13 @@ async function runConversation(testCase, args) {
     const detected = res.headers.get('x-nura-lang') ?? '?';
     if (!res.ok) throw new Error(`HTTP ${res.status} on "${turn}": ${data.error ?? 'no body'}`);
     replies.push(data.reply);
-    transcript.push(`**Visitor:** ${turn}\n\n**Nura** _(detected: ${detected})_: ${data.reply}`);
+    options.push(Array.isArray(data.options) ? data.options : []);
+    const chips = options.at(-1).length ? `\n\n_Options:_ ${options.at(-1).map((o) => `[${o}]`).join(' ')}` : '';
+    transcript.push(`**Visitor:** ${turn}\n\n**Nura** _(detected: ${detected})_: ${data.reply}${chips}`);
     history.push({ role: 'user', text: turn }, { role: 'model', text: data.reply });
     await sleep(args.delayMs);
   }
-  return { replies, transcript };
+  return { replies, options, transcript };
 }
 
 async function main() {
@@ -122,8 +145,8 @@ async function main() {
     const runs = [];
     for (let k = 0; k < args.repeat; k += 1) {
       try {
-        const { replies, transcript } = await runConversation(testCase, args);
-        runs.push({ failures: grade(testCase, replies), transcript });
+        const { replies, options, transcript } = await runConversation(testCase, args);
+        runs.push({ failures: grade(testCase, replies, options), transcript });
       } catch (err) {
         runs.push({ failures: [String(err.message ?? err)], transcript: [] });
       }

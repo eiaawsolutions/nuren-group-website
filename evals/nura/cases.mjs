@@ -6,10 +6,15 @@
 //   excludesAny   — no regex may match any reply in the conversation
 //   maxChars      — final reply length cap
 //   maxCtaReplies — at most this many replies may mention "Talk to our team"
-// Every reply is also checked for headings, tables and runaway length (see run.mjs).
+//   options       — the final reply must come with 2–3 tappable next steps
+// Every reply is also checked (see run.mjs) for headings, tables, length, and
+// the things that made Nura feel scripted in Petrina's feedback: em dashes,
+// " / " lists, more than one question, and exclamation openers.
 
 const CTA = /talk to our team/i;
 const ANY_PRICE = /RM\s?\d/i;
+// A brand reply should lead with a concrete suggestion, not just questions.
+const RECOMMENDS = /KOL|sampling|sampel|sponsored|content|kandungan|ParentCraft|Ask Me Doctor|Ibuencer|试用|样品|内容/i;
 
 export const CASES = [
   // Brand conversations
@@ -17,8 +22,19 @@ export const CASES = [
     id: 'en-awareness',
     turns: ["Hi, we're a baby skincare brand launching in Malaysia next quarter. What would you suggest for awareness?"],
     lang: 'en',
-    includes: [/KOL|content|sponsored|Ibuencer/i],
-    maxChars: 900,
+    includes: [RECOMMENDS],
+    maxChars: 450,
+    options: true,
+  },
+  {
+    // Petrina's scenario: a launch with no goal stated yet. Nura should suggest
+    // a starting point rather than quiz the visitor.
+    id: 'recommend-first',
+    turns: ["Hi! We're a baby skincare brand launching next month. What would you suggest?"],
+    lang: 'en',
+    includes: [RECOMMENDS],
+    maxChars: 450,
+    options: true,
   },
   {
     id: 'en-pricing',
@@ -50,14 +66,29 @@ export const CASES = [
   { id: 'manglish-lah', turns: ['Ok lah, how much ah for KOL campaign?'], lang: 'en' },
   { id: 'manglish-ke', turns: ['Is it ok to run ads for my baby brand ke?'], lang: 'en' },
   { id: 'ada-acronym', turns: ['Do your ads meet ADA accessibility guidelines?'], lang: 'en' },
-  { id: 'bm-full', turns: ['Saya nak tahu pasal pakej iklan untuk brand susu formula kami.'], lang: 'ms' },
+  {
+    id: 'bm-full',
+    turns: ['Saya nak tahu pasal pakej iklan untuk brand susu formula kami.'],
+    lang: 'ms',
+    includes: [RECOMMENDS],
+    excludes: [/\bkamu\b/i],
+    maxChars: 450,
+    options: true,
+  },
   {
     id: 'bm-mixed',
     turns: ['Boleh I tahu macam mana nak buat campaign KOL dengan Ibuencer?'],
     lang: 'ms',
     includes: [/Ibuencer/i],
   },
-  { id: 'zh-full', turns: ['我们是一个婴儿护肤品牌，想在马来西亚做推广，有什么建议？'], lang: 'zh' },
+  {
+    id: 'zh-full',
+    turns: ['我们是一个婴儿护肤品牌，想在马来西亚做推广，有什么建议？'],
+    lang: 'zh',
+    includes: [RECOMMENDS],
+    maxChars: 250,
+    options: true,
+  },
   { id: 'zh-mixed-pricing', turns: ['想了解一下 KOL campaign 的 pricing'], lang: 'zh', includes: [CTA] },
   {
     id: 'switch-to-en',
@@ -81,6 +112,7 @@ export const CASES = [
     id: 'not-pushy-when-browsing',
     turns: ['Just browsing. What is Nuren Group?', "What's Kelab Mama?", 'Who reads Motherhood.com.my?'],
     maxCtaReplies: 1,
+    options: true,
   },
 
   // Honesty about being an AI
