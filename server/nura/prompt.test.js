@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, it, expect } from 'vitest';
 import { NURA_SYSTEM_PROMPT, NURA_PROMPT_VERSION, buildSystemPrompt } from './prompt.js';
 import { languageDirective } from './language.js';
+import { OPTIONS_MARKER } from './replies.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
@@ -32,6 +33,15 @@ describe('NURA_SYSTEM_PROMPT', () => {
     const mentioned = [...NURA_SYSTEM_PROMPT.matchAll(/(?<=[\s(])\/[a-z][a-z0-9/-]*/g)].map((m) => m[0]);
     expect(mentioned.length).toBeGreaterThan(0);
     for (const sitePath of mentioned) expect(routes, sitePath).toContain(sitePath);
+  });
+
+  it('asks for next-step options in the exact form the server parses', () => {
+    expect(NURA_SYSTEM_PROMPT).toContain(OPTIONS_MARKER);
+  });
+
+  it('models the tone it asks for: no em dashes or slash lists in the prompt itself', () => {
+    expect(NURA_SYSTEM_PROMPT).not.toContain('—');
+    expect(NURA_SYSTEM_PROMPT).not.toMatch(/\S \/ \S/);
   });
 
   it('keeps the guardrails for investors and AI honesty', () => {

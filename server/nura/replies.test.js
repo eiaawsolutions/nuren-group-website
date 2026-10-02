@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { replyCopy, trimToLastSentence, finalizeReply } from './replies.js';
+import { replyCopy, trimToLastSentence, finalizeReply, extractOptions } from './replies.js';
 
 describe('replyCopy', () => {
   const keys = ['rateLimited', 'unavailable', 'empty', 'tooLong', 'required'];
@@ -58,18 +58,58 @@ describe('finalizeReply', () => {
       message([{ type: 'thinking', thinking: '' }, { type: 'text', text: ' Hello there. ' }]),
       'en',
     );
-    expect(result).toEqual({ reply: 'Hello there.', truncated: false });
+    expect(result).toEqual({ reply: 'Hello there.', options: [], truncated: false });
   });
 
   it('trims a reply cut off by max_tokens and flags it', () => {
     expect(finalizeReply(message([{ type: 'text', text: 'One sentence. Two sen' }], 'max_tokens'), 'en')).toEqual({
       reply: 'One sentence.',
+      options: [],
       truncated: true,
     });
   });
 
   it('falls back to localised copy when there is no text', () => {
-    expect(finalizeReply(message([]), 'ms')).toEqual({ reply: replyCopy('empty', 'ms'), truncated: false });
+    expect(finalizeReply(message([]), 'ms')).toEqual({ reply: replyCopy('empty', 'ms'), options: [], truncated: false });
     expect(finalizeReply(message(undefined, 'refusal'), 'zh').reply).toBe(replyCopy('empty', 'zh'));
+  });
+});
+
+describe('extractOptions', () => {
+  it('pulls the hidden options line out of the reply', () => {
+    expect(extractOptions('Sampling suits a launch.\n<<options: How does sampling work? | Show me a plan | What about KOLs?>>')).toEqual({
+      text: 'Sampling suits a launch.',
+      options: ['How does sampling work?', 'Show me a plan', 'What about KOLs?'],
+    });
+  });
+
+  it('keeps at most three short, distinct options', () => {
+    const { options } = extractOptions(`Hi.\n<<options: A | A |  | B | C | D | ${'x'.repeat(80)}>>`);
+    expect(options).toEqual(['A', 'B', 'C']);
+  });
+
+  it('handles a missing closing marker and an empty list', () => {
+    expect(extractOptions('Hello.\n<<options: Plan | Cost')).toEqual({ text: 'Hello.', options: ['Plan', 'Cost'] });
+    expect(extractOptions('Hello.\n<<options:>>')).toEqual({ text: 'Hello.', options: [] });
+  });
+
+  it('strips a marker cut off mid-word by max_tokens', () => {
+    expect(extractOptions('Hello there.\n<<opt')).toEqual({ text: 'Hello there.', options: [] });
+  });
+
+  it('leaves replies without a marker alone', () => {
+    expect(extractOptions('Just an answer.')).toEqual({ text: 'Just an answer.', options: [] });
+  });
+});
+
+describe('finalizeReply with options', () => {
+  it('returns the options separately from the visible reply', () => {
+    const message = { stop_reason: 'end_turn', content: [{ type: 'text', text: 'Try sampling.\n<<options: How? | Cost?>>' }] };
+    expect(finalizeReply(message, 'en')).toEqual({ reply: 'Try sampling.', options: ['How?', 'Cost?'], truncated: false });
+  });
+
+  it('never shows a bare options line as the reply', () => {
+    const message = { stop_reason: 'end_turn', content: [{ type: 'text', text: '<<options: A | B>>' }] };
+    expect(finalizeReply(message, 'en')).toEqual({ reply: replyCopy('empty', 'en'), options: ['A', 'B'], truncated: false });
   });
 });

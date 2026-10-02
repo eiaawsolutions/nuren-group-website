@@ -6,6 +6,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import helmet from 'helmet';
 import { LRUCache } from 'lru-cache';
 import { escapeHtml } from './server/html.js';
+import { createRateLimiter } from './server/rate-limit.js';
 import { NURA_SYSTEM_PROMPT, NURA_PROMPT_VERSION } from './server/nura/prompt.js';
 import { detectReplyLanguage } from './server/nura/language.js';
 import { replyCopy, finalizeReply } from './server/nura/replies.js';
@@ -52,9 +53,10 @@ const RATE_LIMIT_MAX_KEYS = 10_000;
 const ADMIN_LOCKOUT_FAILS = 5;
 const ADMIN_LOCKOUT_WINDOW_MS = 15 * 60 * 1000;
 
-const chatRateLimit = new LRUCache({ max: RATE_LIMIT_MAX_KEYS, ttl: CHAT_RATE_WINDOW_MS });
-const enquiryRateLimit = new LRUCache({ max: RATE_LIMIT_MAX_KEYS, ttl: ENQUIRY_RATE_WINDOW_MS });
-const adminRateLimit = new LRUCache({ max: RATE_LIMIT_MAX_KEYS, ttl: ADMIN_RATE_WINDOW_MS });
+const allowChat = createRateLimiter({ windowMs: CHAT_RATE_WINDOW_MS, max: CHAT_RATE_MAX, maxKeys: RATE_LIMIT_MAX_KEYS });
+const allowEnquiry = createRateLimiter({ windowMs: ENQUIRY_RATE_WINDOW_MS, max: ENQUIRY_RATE_MAX, maxKeys: RATE_LIMIT_MAX_KEYS });
+const allowAdmin = createRateLimiter({ windowMs: ADMIN_RATE_WINDOW_MS, max: ADMIN_RATE_MAX, maxKeys: RATE_LIMIT_MAX_KEYS });
+// Each failed login re-sets this entry and so extends the lockout; that's intended.
 const adminFailures = new LRUCache({ max: 1000, ttl: ADMIN_LOCKOUT_WINDOW_MS });
 
 const enquiryLog = [];
@@ -68,12 +70,6 @@ function pushRing(buffer, item) {
 function logError(scope, detail) {
   pushRing(errorLog, { ts: new Date().toISOString(), scope, detail: String(detail).slice(0, 500) });
   console.error(`[${scope}]`, detail);
-}
-
-function checkRateLimit(store, key, _windowMs, max) {
-  const count = (store.get(key) || 0) + 1;
-  store.set(key, count);
-  return count <= max;
 }
 
 // Trust Express's req.ip — with `app.set('trust proxy', true)`, it walks the
@@ -117,7 +113,7 @@ function adminAuth(req, res, next) {
     return res.status(429).json({ error: 'Too many failed attempts. Try again later.' });
   }
 
-  if (!checkRateLimit(adminRateLimit, ip, ADMIN_RATE_WINDOW_MS, ADMIN_RATE_MAX)) {
+  if (!allowAdmin(ip)) {
     return res.status(429).json({ error: 'Too many admin requests.' });
   }
 
@@ -229,7 +225,7 @@ app.post('/api/chat', async (req, res) => {
     res.status(status).json({ error: replyCopy(copyKey, replyLang), lang: replyLang });
 
   const ip = clientIp(req);
-  if (!checkRateLimit(chatRateLimit, ip, CHAT_RATE_WINDOW_MS, CHAT_RATE_MAX)) {
+  if (!allowChat(ip)) {
     return fail(429, 'rateLimited');
   }
 
@@ -239,9 +235,11 @@ app.post('/api/chat', async (req, res) => {
   if (!message) return fail(400, 'required');
   if (message.length > MAX_MESSAGE_LENGTH) return fail(400, 'tooLong');
 
-  // The chat window asks for Server-Sent Events so the reply appears as it's
-  // written; other callers (the eval runner) get one JSON response. Both use
-  // the same streaming call, so they exercise the same code.
+  // The chat window asks for Server-Sent Events: the connection lets us stop
+  // the model call if the visitor leaves, and a single `done` event carries
+  // the finished reply (the window paces it like a person typing rather than
+  // showing tokens as they arrive). Other callers (the eval runner) get one
+  // JSON response. Both use the same streaming call, so they share one path.
   const wantsStream = (req.get('accept') || '').includes('text/event-stream');
   const started = Date.now();
   const stream = client.messages.stream(
@@ -259,17 +257,15 @@ app.post('/api/chat', async (req, res) => {
         stream.abort();
       }
     });
-    stream.on('text', (text) => sendEvent(res, 'delta', { text }));
   }
 
   try {
     const final = await stream.finalMessage();
-    // The final reply may differ from the streamed text (trimmed after a
-    // max_tokens cut-off, or fallback copy when empty); the client shows this.
-    const { reply, truncated } = finalizeReply(final, replyLang);
+    // The hidden options line is split off here, so it never reaches the visitor as text.
+    const { reply, options, truncated } = finalizeReply(final, replyLang);
     logUsage({ route: 'chat', lang: replyLang, message: final, latencyMs: Date.now() - started, truncated });
-    if (!wantsStream) return res.json({ reply, lang: replyLang });
-    sendEvent(res, 'done', { reply, lang: replyLang });
+    if (!wantsStream) return res.json({ reply, options, lang: replyLang });
+    sendEvent(res, 'done', { reply, options, lang: replyLang });
     return res.end();
   } catch (err) {
     if (visitorLeft) {
@@ -293,7 +289,7 @@ app.post('/api/chat/brief', async (req, res) => {
   const lang = detectReplyLanguage('', history);
 
   const ip = clientIp(req);
-  if (!checkRateLimit(chatRateLimit, ip, CHAT_RATE_WINDOW_MS, CHAT_RATE_MAX)) {
+  if (!allowChat(ip)) {
     return res.status(429).json({ error: replyCopy('rateLimited', lang) });
   }
   if (!history.some((turn) => turn.role === 'user')) {
@@ -323,7 +319,7 @@ app.post('/api/chat/brief', async (req, res) => {
 
 app.post('/api/enquiry', async (req, res) => {
   const ip = clientIp(req);
-  if (!checkRateLimit(enquiryRateLimit, ip, ENQUIRY_RATE_WINDOW_MS, ENQUIRY_RATE_MAX)) {
+  if (!allowEnquiry(ip)) {
     return res.status(429).json({ error: 'Too many submissions. Please try again later.' });
   }
 

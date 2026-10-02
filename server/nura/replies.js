@@ -45,20 +45,46 @@ export function replyCopy(key, lang) {
 // the end, so "RM1.5K" and "nurengroup.com" don't count as sentence ends.
 const SENTENCE_END_RE = /[.!?…](?=\s|$|["'”’)])|[。！？]/g;
 
+// Nura ends each reply with a hidden line of tappable next steps (see the
+// "Next-step options" section of prompt.md); the chat shows them as buttons.
+export const OPTIONS_MARKER = '<<options:';
+const MAX_OPTIONS = 3;
+const MAX_OPTION_CHARS = 60;
+
+/** Split the hidden options line from the visible reply. */
+export function extractOptions(raw) {
+  // Also catches a marker cut off by max_tokens ("<<opt").
+  const start = raw.search(/<<\s*opt/i);
+  if (start === -1) return { text: raw.trim(), options: [] };
+  const list = raw
+    .slice(start)
+    .replace(/^<<\s*options?\s*:?/i, '')
+    .replace(/>>[\s\S]*$/, '');
+  const options = [];
+  for (const item of list.split('|')) {
+    const option = item.trim().replace(/^["'“”]+|["'“”]+$/g, '');
+    if (option && !/^<<\s*opt/i.test(option) && option.length <= MAX_OPTION_CHARS && !options.includes(option)) {
+      options.push(option);
+    }
+  }
+  return { text: raw.slice(0, start).trim(), options: options.slice(0, MAX_OPTIONS) };
+}
+
 /**
  * The visitor-facing reply from a finished model message: text blocks only
- * (thinking blocks are skipped), trimmed back to a full sentence if
- * max_tokens cut it off, or localised fallback copy if there's no text.
+ * (thinking blocks are skipped), the hidden options line split off, trimmed
+ * back to a full sentence if max_tokens cut it off, or localised fallback
+ * copy if there's no text.
  */
 export function finalizeReply(message, lang) {
-  const text = (message.content ?? [])
+  const raw = (message.content ?? [])
     .filter((block) => block.type === 'text')
     .map((block) => block.text)
-    .join('\n')
-    .trim();
-  if (!text) return { reply: replyCopy('empty', lang), truncated: false };
-  if (message.stop_reason === 'max_tokens') return { reply: trimToLastSentence(text), truncated: true };
-  return { reply: text, truncated: false };
+    .join('\n');
+  const { text, options } = extractOptions(raw);
+  if (!text) return { reply: replyCopy('empty', lang), options, truncated: false };
+  if (message.stop_reason === 'max_tokens') return { reply: trimToLastSentence(text), options, truncated: true };
+  return { reply: text, options, truncated: false };
 }
 
 /** Cut a truncated reply back to its last complete sentence or line. */
