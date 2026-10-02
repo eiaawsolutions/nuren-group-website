@@ -261,7 +261,7 @@ export function AdminPage() {
               <p className="text-sm text-slate-400">
                 Settings are read-only here by design. To change a value, update the corresponding environment variable in the
                 {' '}<a href="https://railway.com/project/dcee776f-2d22-4312-a6da-e1431cc25b84" target="_blank" rel="noreferrer" className="text-pink-400 hover:text-pink-300 underline">Railway dashboard</a>{' '}
-                — the service will redeploy automatically. The knowledge base lives in <code className="text-slate-300">server.js</code> and changes via a code commit.
+                — the service will redeploy automatically. The knowledge base lives in <code className="text-slate-300">server/nura/prompt.md</code> and changes via a code commit.
               </p>
             </section>
           </div>
