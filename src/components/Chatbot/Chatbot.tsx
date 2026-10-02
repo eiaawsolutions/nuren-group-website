@@ -2,26 +2,45 @@ import { useState, useRef, useEffect } from 'react';
 import type { FormEvent, KeyboardEvent, ReactNode } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { MessageCircle, X, Send, Sparkles, CheckCircle2, Loader2, ArrowLeft } from 'lucide-react';
+import { RichText } from './RichText';
 
 type Role = 'user' | 'model';
 interface ChatMessage {
   role: Role;
   text: string;
+  // Error notices shown in the chat but never sent back to the model as history.
+  local?: boolean;
 }
 
 type View = 'chat' | 'form' | 'success';
+type Lang = 'en' | 'ms' | 'zh';
 
 const INTRO_MESSAGE: ChatMessage = {
   role: 'model',
   text:
-    "Hi! I'm Nura 👋 I help brands reach 5M+ mums across Malaysia. Are you looking to advertise, run KOL campaigns, or explore a partnership? Tap \"Talk to our team\" anytime for a custom proposal.",
+    "Hi, I'm Nura, Nuren Group's AI assistant. Whether you're planning a campaign to reach Malaysian mums or just looking around, I'm happy to help. You can chat with me in English, BM or 中文.",
 };
 
+// Cover the main reasons people open the chat, not only advertisers.
 const SUGGESTED_PROMPTS = [
-  'I want to advertise my brand',
-  'Tell me about Ibuencer KOL campaigns',
-  'How do I get a campaign proposal?',
+  'I want to reach mums with my brand',
+  'How do KOL campaigns with Ibuencer work?',
+  "I'm a creator. Can I join Ibuencer?",
+  'Where can I find investor information?',
 ];
+
+// Enough history for Nura to remember the brand and goal from the start of a chat.
+const HISTORY_LIMIT = 20;
+
+// Shown when the server can't be reached at all (otherwise the server sends
+// its own localised error).
+const CONNECTION_ERROR: Record<Lang, string> = {
+  en: "Sorry, I couldn't connect just now. Please try again, or tap Talk to our team and the team will get back to you.",
+  ms: 'Maaf, sambungan terputus sebentar. Cuba lagi, atau tekan Talk to our team dan team kami akan menghubungi anda.',
+  zh: '抱歉，刚才连接不上。请再试一次，或点击下方的 Talk to our team，我们的团队会联系你。',
+};
+
+const isLang = (value: unknown): value is Lang => value === 'en' || value === 'ms' || value === 'zh';
 
 const CHAT_ENDPOINT = '/api/chat';
 const ENQUIRY_ENDPOINT = '/api/enquiry';
@@ -50,7 +69,8 @@ export const Chatbot = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([INTRO_MESSAGE]);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
-  const [chatError, setChatError] = useState<string | null>(null);
+  // Last reply language reported by the server, for client-side error copy.
+  const lastLang = useRef<Lang>('en');
 
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
@@ -76,17 +96,20 @@ export const Chatbot = () => {
     const trimmed = text.trim();
     if (!trimmed || sending) return;
 
-    setChatError(null);
     const newMessages: ChatMessage[] = [...messages, { role: 'user', text: trimmed }];
     setMessages(newMessages);
     setInput('');
     setSending(true);
+    const fallbackLang: Lang = /[一-鿿]/.test(trimmed) ? 'zh' : lastLang.current;
+    const addNotice = (text: string) =>
+      setMessages((prev) => [...prev, { role: 'model', text, local: true }]);
 
     try {
       const history = newMessages
-        .filter((m) => m !== INTRO_MESSAGE)
+        .filter((m) => m !== INTRO_MESSAGE && !m.local)
         .slice(0, -1)
-        .slice(-10);
+        .slice(-HISTORY_LIMIT)
+        .map(({ role, text: turnText }) => ({ role, text: turnText }));
 
       const res = await fetch(CHAT_ENDPOINT, {
         method: 'POST',
@@ -95,22 +118,16 @@ export const Chatbot = () => {
       });
 
       const data = await res.json().catch(() => ({}));
+      if (isLang(data.lang)) lastLang.current = data.lang;
       if (!res.ok) {
-        throw new Error(data.error || 'Something went wrong.');
+        // The server localises its own errors; fall back if it sent none.
+        addNotice(data.error || CONNECTION_ERROR[fallbackLang]);
+        return;
       }
 
       setMessages((prev) => [...prev, { role: 'model', text: data.reply || '…' }]);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Something went wrong.';
-      setChatError(msg);
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: 'model',
-          text:
-            "Sorry — I couldn't reach the server just now. You can try again or tap Talk to our team and we'll get back to you.",
-        },
-      ]);
+    } catch {
+      addNotice(CONNECTION_ERROR[fallbackLang]);
     } finally {
       setSending(false);
     }
@@ -181,7 +198,6 @@ export const Chatbot = () => {
       setForm(EMPTY_FORM);
       setFormErrors({});
       setSubmitError(null);
-      setChatError(null);
     }, 300);
   };
 
@@ -261,6 +277,9 @@ export const Chatbot = () => {
               <>
                 <div
                   ref={scrollRef}
+                  role="log"
+                  aria-live="polite"
+                  aria-label="Conversation with Nura"
                   className="flex-1 overflow-y-auto px-4 py-5 space-y-3 bg-slate-50"
                 >
                   {messages.map((m, i) => (
@@ -269,13 +288,14 @@ export const Chatbot = () => {
                       className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
                     >
                       <div
-                        className={`max-w-[85%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${
+                        className={`max-w-[85%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed [overflow-wrap:anywhere] ${
                           m.role === 'user'
-                            ? 'bg-nuren-pink text-white rounded-br-md'
+                            ? 'bg-nuren-pink text-white rounded-br-md whitespace-pre-wrap'
                             : 'bg-white text-slate-800 border border-slate-200 rounded-bl-md shadow-sm'
                         }`}
                       >
-                        {m.text}
+                        <span className="sr-only">{m.role === 'user' ? 'You: ' : 'Nura: '}</span>
+                        {m.role === 'user' ? m.text : <RichText text={m.text} />}
                       </div>
                     </div>
                   ))}
@@ -302,9 +322,6 @@ export const Chatbot = () => {
                         </button>
                       ))}
                     </div>
-                  )}
-                  {chatError && (
-                    <div className="text-xs text-rose-600 px-1">{chatError}</div>
                   )}
                 </div>
 
