@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { toAnthropicMessages, buildChatRequest } from './request.js';
-import { NURA_SYSTEM_PROMPT } from './prompt.js';
+import { NURA_SYSTEM_PROMPT, TURN_REMINDER } from './prompt.js';
 import { languageDirective } from './language.js';
 import { resolveModelConfig } from './model.js';
 
@@ -54,7 +54,8 @@ describe('buildChatRequest', () => {
     const params = buildChatRequest({ model: haiku, lang: 'ms', history: [], message: 'Hai' });
     expect(params.system).toEqual([
       { type: 'text', text: NURA_SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } },
-      { type: 'text', text: languageDirective('ms') },
+      { type: 'text', text: `${languageDirective('ms')}
+${TURN_REMINDER}` },
     ]);
     expect(params.cache_control).toEqual({ type: 'ephemeral' });
   });

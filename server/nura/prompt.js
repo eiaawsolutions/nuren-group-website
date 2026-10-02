@@ -19,15 +19,21 @@ export const NURA_SYSTEM_PROMPT = fs
 // can be tied to the exact prompt that produced them.
 export const NURA_PROMPT_VERSION = crypto.createHash('sha256').update(NURA_SYSTEM_PROMPT).digest('hex').slice(0, 8);
 
+// Restated in the per-turn note because instructions at the end of the
+// system prompt carry the most weight, and these slipped in production
+// evals (replies of 500-900 characters, two questions at once).
+export const TURN_REMINDER =
+  'For this reply: under about 60 words, at most one question, start with substance, and finish with the options line.';
+
 /**
  * System blocks for one chat turn: the stable prompt first, with a cache
- * breakpoint, then the per-turn language note, so the cached prefix never
- * changes between turns.
+ * breakpoint, then the per-turn language note and reminder, so the cached
+ * prefix never changes between turns.
  * @param {'en' | 'ms' | 'zh'} lang
  */
 export function buildSystemPrompt(lang) {
   return [
     { type: 'text', text: NURA_SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } },
-    { type: 'text', text: languageDirective(lang) },
+    { type: 'text', text: `${languageDirective(lang)}\n${TURN_REMINDER}` },
   ];
 }

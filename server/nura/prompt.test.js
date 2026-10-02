@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, it, expect } from 'vitest';
-import { NURA_SYSTEM_PROMPT, NURA_PROMPT_VERSION, buildSystemPrompt } from './prompt.js';
+import { NURA_SYSTEM_PROMPT, NURA_PROMPT_VERSION, TURN_REMINDER, buildSystemPrompt } from './prompt.js';
 import { languageDirective } from './language.js';
 import { OPTIONS_MARKER } from './replies.js';
 
@@ -55,7 +55,8 @@ describe('buildSystemPrompt', () => {
     const blocks = buildSystemPrompt('ms');
     expect(blocks).toEqual([
       { type: 'text', text: NURA_SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } },
-      { type: 'text', text: languageDirective('ms') },
+      { type: 'text', text: `${languageDirective('ms')}
+${TURN_REMINDER}` },
     ]);
   });
 

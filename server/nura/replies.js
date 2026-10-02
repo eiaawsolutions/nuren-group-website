@@ -50,6 +50,9 @@ const SENTENCE_END_RE = /[.!?…](?=\s|$|["'”’)])|[。！？]/g;
 export const OPTIONS_MARKER = '<<options:';
 const MAX_OPTIONS = 3;
 const MAX_OPTION_CHARS = 60;
+// The "Talk to our team" button is always on screen; an option that repeats
+// it would only send that phrase as a chat message.
+const TEAM_OPTION_RE = /\b(?:talk|speak|chat)\s+(?:to|with)\s+(?:our|the)\s+team\b|\bcontact\s+(?:the\s+|our\s+)?team\b|hubungi\s+(?:team|pasukan)|联系团队|联系我们/i;
 
 /** Split the hidden options line from the visible reply. */
 export function extractOptions(raw) {
@@ -63,25 +66,65 @@ export function extractOptions(raw) {
   const options = [];
   for (const item of list.split('|')) {
     const option = item.trim().replace(/^["'“”]+|["'“”]+$/g, '');
-    if (option && !/^<<\s*opt/i.test(option) && option.length <= MAX_OPTION_CHARS && !options.includes(option)) {
+    const usable = option && !/^<<\s*opt/i.test(option) && !TEAM_OPTION_RE.test(option);
+    if (usable && option.length <= MAX_OPTION_CHARS && !options.includes(option)) {
       options.push(option);
     }
   }
   return { text: raw.slice(0, start).trim(), options: options.slice(0, MAX_OPTIONS) };
 }
 
+const HAN_RE = /\p{Script=Han}/u;
+const SHORT_OPENER_WORDS = 3;
+const SHORT_OPENER_HAN_CHARS = 6;
+
+/**
+ * Formatting habits that make replies read as AI-written, fixed in code
+ * because the model keeps them even when the prompt says not to (Petrina's
+ * feedback, Oct 2026): em dashes become commas, and an exclamation opener
+ * ("Hey!", "Boleh!", "Nice timing!") is dropped if it's a short interjection
+ * or calmed to a full stop if it's a real sentence.
+ */
+export function naturalize(text) {
+  let out = text
+    .replace(/(\p{Script=Han})\s*—+\s*/gu, '$1，')
+    .replace(/\s*—+\s*/g, ', ')
+    // A spaced en dash is used as a dash; unspaced ones are ranges (25–44).
+    .replace(/(\S)\s+–\s+(\S)/g, '$1, $2')
+    .replace(/^,\s*/gm, '')
+    .replace(/,\s*([.,;:!?])/g, '$1');
+
+  const opener = out.match(/^(\s*)([^.!?。！？\n]+)([!！])[ \t]*/u);
+  const rest = opener ? out.slice(opener[0].length) : '';
+  if (opener && rest.trim()) {
+    const phrase = opener[2].trim();
+    const short = HAN_RE.test(phrase)
+      ? [...phrase].length <= SHORT_OPENER_HAN_CHARS
+      : phrase.split(/\s+/).length <= SHORT_OPENER_WORDS;
+    if (short) {
+      out = rest;
+    } else {
+      const bang = opener[1].length + opener[2].length;
+      out = out.slice(0, bang) + (opener[3] === '！' ? '。' : '.') + out.slice(bang + 1);
+    }
+  }
+  return out.trim();
+}
+
 /**
  * The visitor-facing reply from a finished model message: text blocks only
- * (thinking blocks are skipped), the hidden options line split off, trimmed
- * back to a full sentence if max_tokens cut it off, or localised fallback
- * copy if there's no text.
+ * (thinking blocks are skipped), the hidden options line split off,
+ * punctuation tidied, trimmed back to a full sentence if max_tokens cut it
+ * off, or localised fallback copy if there's no text.
  */
 export function finalizeReply(message, lang) {
   const raw = (message.content ?? [])
     .filter((block) => block.type === 'text')
     .map((block) => block.text)
     .join('\n');
-  const { text, options } = extractOptions(raw);
+  const extracted = extractOptions(raw);
+  const { options } = extracted;
+  const text = extracted.text && naturalize(extracted.text);
   if (!text) return { reply: replyCopy('empty', lang), options, truncated: false };
   if (message.stop_reason === 'max_tokens') return { reply: trimToLastSentence(text), options, truncated: true };
   return { reply: text, options, truncated: false };
