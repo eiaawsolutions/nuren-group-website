@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { replyCopy, trimToLastSentence } from './replies.js';
+import { replyCopy, trimToLastSentence, finalizeReply } from './replies.js';
 
 describe('replyCopy', () => {
   const keys = ['rateLimited', 'unavailable', 'empty', 'tooLong', 'required'];
@@ -43,9 +43,33 @@ describe('trimToLastSentence', () => {
     );
   });
 
-  it('leaves text alone when there is no earlier boundary to cut back to', () => {
+  it('leaves text alone when there is no boundary to cut back to', () => {
     expect(trimToLastSentence('Sponsored content and KOL campaigns are a good')).toBe(
       'Sponsored content and KOL campaigns are a good',
     );
+  });
+});
+
+describe('finalizeReply', () => {
+  const message = (content, stop_reason = 'end_turn') => ({ content, stop_reason });
+
+  it('joins the text blocks and ignores thinking blocks', () => {
+    const result = finalizeReply(
+      message([{ type: 'thinking', thinking: '' }, { type: 'text', text: ' Hello there. ' }]),
+      'en',
+    );
+    expect(result).toEqual({ reply: 'Hello there.', truncated: false });
+  });
+
+  it('trims a reply cut off by max_tokens and flags it', () => {
+    expect(finalizeReply(message([{ type: 'text', text: 'One sentence. Two sen' }], 'max_tokens'), 'en')).toEqual({
+      reply: 'One sentence.',
+      truncated: true,
+    });
+  });
+
+  it('falls back to localised copy when there is no text', () => {
+    expect(finalizeReply(message([]), 'ms')).toEqual({ reply: replyCopy('empty', 'ms'), truncated: false });
+    expect(finalizeReply(message(undefined, 'refusal'), 'zh').reply).toBe(replyCopy('empty', 'zh'));
   });
 });

@@ -5,9 +5,15 @@ import { fileURLToPath } from 'node:url';
 import Anthropic from '@anthropic-ai/sdk';
 import helmet from 'helmet';
 import { LRUCache } from 'lru-cache';
-import { NURA_SYSTEM_PROMPT, buildSystemPrompt } from './server/nura/prompt.js';
+import { escapeHtml } from './server/html.js';
+import { NURA_SYSTEM_PROMPT, NURA_PROMPT_VERSION } from './server/nura/prompt.js';
 import { detectReplyLanguage } from './server/nura/language.js';
-import { replyCopy, trimToLastSentence } from './server/nura/replies.js';
+import { replyCopy, finalizeReply } from './server/nura/replies.js';
+import { resolveModelConfig } from './server/nura/model.js';
+import { buildChatRequest } from './server/nura/request.js';
+import { createUsageTracker } from './server/nura/usage.js';
+import { buildBriefRequest, parseBrief } from './server/nura/brief.js';
+import { sanitizeTranscript, renderTranscript } from './server/nura/transcript.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT) || 3000;
@@ -17,17 +23,22 @@ const ENQUIRY_RECIPIENT = process.env.ENQUIRY_RECIPIENT || 'petrina.goh@nurengro
 const ENQUIRY_FROM_EMAIL = process.env.ENQUIRY_FROM_EMAIL || 'Nuren Group Website <onboarding@resend.dev>';
 const ENQUIRY_SUBJECT_PREFIX = 'Nuren Group Website Enquiry';
 
-// Nura's prompt lives in server/nura/prompt.md; language handling and
-// fallback copy live alongside it in server/nura/.
+// Nura's prompt, model registry, request building, language handling and
+// usage tracking live in server/nura/. NURA_MODEL picks the model by key
+// (haiku | sonnet); NURA_EFFORT tunes models that support effort.
+const NURA_MODEL = resolveModelConfig();
+if (NURA_MODEL.warning) console.warn(`[nura] ${NURA_MODEL.warning}`);
+const nuraUsage = createUsageTracker();
+
 const MAX_MESSAGE_LENGTH = 1000;
-const MAX_HISTORY_REPLY_LENGTH = 2000;
-// ~12 exchanges, so Nura still remembers the brand and goal from the start.
-const MAX_HISTORY = 24;
-const CHAT_MODEL = 'claude-haiku-4-5-20251001';
-// Length is steered by the prompt; this is headroom so Mandarin replies
-// (more tokens per sentence) aren't cut off.
-const CHAT_MAX_TOKENS = 1024;
 const CHAT_TIMEOUT_MS = 30_000;
+
+const SSE_HEADERS = {
+  'Content-Type': 'text/event-stream; charset=utf-8',
+  'Cache-Control': 'no-cache, no-transform',
+  // Ask proxies in front of the app not to buffer the stream.
+  'X-Accel-Buffering': 'no',
+};
 
 const CHAT_RATE_WINDOW_MS = 60_000;
 const CHAT_RATE_MAX = 20;
@@ -70,15 +81,6 @@ function checkRateLimit(store, key, _windowMs, max) {
 // client can send `X-Forwarded-For: 1.2.3.4` to bypass per-IP rate limits.
 function clientIp(req) {
   return req.ip || 'unknown';
-}
-
-function escapeHtml(str) {
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
 }
 
 function isEmail(value) {
@@ -202,20 +204,18 @@ function getAnthropicClient() {
   return new Anthropic({ apiKey, timeout: CHAT_TIMEOUT_MS });
 }
 
-// Frontend sends history with role: 'user' | 'model' (Gemini convention).
-// Anthropic expects role: 'user' | 'assistant'. Map at the boundary.
-// History is client-supplied, so both the turn count and turn length are capped.
-function toAnthropicMessages(rawHistory, currentMessage) {
-  const mapped = (Array.isArray(rawHistory) ? rawHistory.slice(-MAX_HISTORY) : [])
-    .filter((m) => m && typeof m.text === 'string' && m.text.trim() && (m.role === 'user' || m.role === 'model'))
-    .map((m) => ({
-      role: m.role === 'model' ? 'assistant' : 'user',
-      content: m.text.slice(0, m.role === 'model' ? MAX_HISTORY_REPLY_LENGTH : MAX_MESSAGE_LENGTH),
-    }));
-  // The API requires the conversation to open with a user turn.
-  while (mapped.length && mapped[0].role === 'assistant') mapped.shift();
-  mapped.push({ role: 'user', content: currentMessage });
-  return mapped;
+function sendEvent(res, event, data) {
+  res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+}
+
+// One structured log line per model call (no message content), plus the
+// running totals shown on the admin page.
+function logUsage(call) {
+  const record = nuraUsage.record({ ...call, model: NURA_MODEL, promptVersion: NURA_PROMPT_VERSION });
+  console.log(JSON.stringify({ msg: 'nura.usage', ...record }));
+  if (call.truncated) {
+    logError('chat:truncated', `lang=${call.lang} output_tokens=${call.message.usage?.output_tokens}`);
+  }
 }
 
 app.post('/api/chat', async (req, res) => {
@@ -239,33 +239,85 @@ app.post('/api/chat', async (req, res) => {
   if (!message) return fail(400, 'required');
   if (message.length > MAX_MESSAGE_LENGTH) return fail(400, 'tooLong');
 
-  try {
-    const response = await client.messages.create({
-      model: CHAT_MODEL,
-      max_tokens: CHAT_MAX_TOKENS,
-      system: buildSystemPrompt(replyLang),
-      messages: toAnthropicMessages(history, message),
+  // The chat window asks for Server-Sent Events so the reply appears as it's
+  // written; other callers (the eval runner) get one JSON response. Both use
+  // the same streaming call, so they exercise the same code.
+  const wantsStream = (req.get('accept') || '').includes('text/event-stream');
+  const started = Date.now();
+  const stream = client.messages.stream(
+    buildChatRequest({ model: NURA_MODEL, lang: replyLang, history, message }),
+  );
+
+  let visitorLeft = false;
+  if (wantsStream) {
+    res.status(200).set(SSE_HEADERS);
+    res.flushHeaders();
+    // Stop generating (and paying for) a reply nobody will read.
+    res.on('close', () => {
+      if (!res.writableEnded) {
+        visitorLeft = true;
+        stream.abort();
+      }
     });
+    stream.on('text', (text) => sendEvent(res, 'delta', { text }));
+  }
 
-    let reply = (response.content ?? [])
-      .filter((block) => block.type === 'text')
-      .map((block) => block.text)
-      .join('\n')
-      .trim();
-
-    // A reply cut off by max_tokens would end mid-sentence; trim it back to
-    // the last complete sentence and record it so the limit can be tuned.
-    if (response.stop_reason === 'max_tokens' && reply) {
-      reply = trimToLastSentence(reply);
-      logError('chat:truncated', `lang=${replyLang} output_tokens=${response.usage?.output_tokens}`);
-    }
-
-    return res.json({ reply: reply || replyCopy('empty', replyLang), lang: replyLang });
+  try {
+    const final = await stream.finalMessage();
+    // The final reply may differ from the streamed text (trimmed after a
+    // max_tokens cut-off, or fallback copy when empty); the client shows this.
+    const { reply, truncated } = finalizeReply(final, replyLang);
+    logUsage({ route: 'chat', lang: replyLang, message: final, latencyMs: Date.now() - started, truncated });
+    if (!wantsStream) return res.json({ reply, lang: replyLang });
+    sendEvent(res, 'done', { reply, lang: replyLang });
+    return res.end();
   } catch (err) {
+    if (visitorLeft) {
+      nuraUsage.recordFailure('aborted');
+      return undefined;
+    }
+    nuraUsage.recordFailure('error');
     const status = err?.status || err?.statusCode;
     const detail = err?.message || String(err);
     logError('chat:anthropic', status ? `${status} ${detail}` : detail);
-    return fail(status && status >= 400 && status < 500 ? 502 : 500, 'unavailable');
+    if (!wantsStream) return fail(status && status >= 400 && status < 500 ? 502 : 500, 'unavailable');
+    sendEvent(res, 'error', { error: replyCopy('unavailable', replyLang), lang: replyLang });
+    return res.end();
+  }
+});
+
+// Drafts the enquiry form's topic and description from the chat so far.
+// The visitor reviews the draft; failures just leave the form blank.
+app.post('/api/chat/brief', async (req, res) => {
+  const history = sanitizeTranscript(req.body?.history);
+  const lang = detectReplyLanguage('', history);
+
+  const ip = clientIp(req);
+  if (!checkRateLimit(chatRateLimit, ip, CHAT_RATE_WINDOW_MS, CHAT_RATE_MAX)) {
+    return res.status(429).json({ error: replyCopy('rateLimited', lang) });
+  }
+  if (!history.some((turn) => turn.role === 'user')) {
+    return res.status(400).json({ error: 'There is no conversation to draft from yet.' });
+  }
+
+  const client = getAnthropicClient();
+  if (!client) return res.status(503).json({ error: replyCopy('unavailable', lang) });
+
+  const started = Date.now();
+  try {
+    const message = await client.messages.create(buildBriefRequest({ model: NURA_MODEL, lang, history }));
+    logUsage({ route: 'brief', lang, message, latencyMs: Date.now() - started });
+    const brief = parseBrief(message);
+    if (!brief) {
+      logError('brief:unparseable', `stop_reason=${message.stop_reason}`);
+      return res.status(502).json({ error: 'Could not draft the enquiry.' });
+    }
+    return res.json({ ...brief, lang });
+  } catch (err) {
+    nuraUsage.recordFailure('error');
+    const status = err?.status || err?.statusCode;
+    logError('brief:anthropic', status ? `${status} ${err?.message}` : err?.message || String(err));
+    return res.status(502).json({ error: 'Could not draft the enquiry.' });
   }
 });
 
@@ -288,6 +340,8 @@ app.post('/api/enquiry', async (req, res) => {
   // would enable RFC 5322 header injection (Bcc:, additional From:, etc).
   const topic = String(payload.topic || '').replace(/[\r\n]+/g, ' ').trim().slice(0, 160);
   const description = String(payload.description || '').trim().slice(0, 4000);
+  // Present only when the visitor ticked "include my chat"; capped and escaped.
+  const transcript = sanitizeTranscript(payload.transcript);
 
   const errors = {};
   if (!name) errors.name = 'Name is required.';
@@ -302,7 +356,7 @@ app.post('/api/enquiry', async (req, res) => {
   }
 
   const result = await deliverEnquiry({
-    name, email, phone, topic, description, ip,
+    name, email, phone, topic, description, transcript, ip,
     userAgent: String(req.headers['user-agent'] || 'unknown'),
     submittedAt: new Date().toISOString(),
   });
@@ -320,6 +374,8 @@ app.post('/api/enquiry', async (req, res) => {
     emailHash: crypto.createHash('sha256').update(email.toLowerCase()).digest('hex').slice(0, 12),
     topic,
     descriptionPreview: description.slice(0, 80),
+    // The transcript itself only goes to the email, never into this buffer.
+    chatTurns: transcript.length,
     delivery: result.delivery,
   });
 
@@ -329,8 +385,10 @@ app.post('/api/enquiry', async (req, res) => {
   return res.json({ ok: true, delivery: result.delivery });
 });
 
-async function deliverEnquiry({ name, email, phone, topic, description, ip, userAgent, submittedAt }) {
+async function deliverEnquiry({ name, email, phone, topic, description, transcript = [], ip, userAgent, submittedAt }) {
   const subject = `${ENQUIRY_SUBJECT_PREFIX}: ${topic}`;
+  const chat = renderTranscript(transcript);
+  const chatHeading = `Chat with Nura (${transcript.length} messages, shared by the visitor)`;
   const textBody = [
     'A new enquiry was submitted via the Nuren Group website chatbot.',
     '',
@@ -342,6 +400,7 @@ async function deliverEnquiry({ name, email, phone, topic, description, ip, user
     'Description:',
     description,
     '',
+    ...(chat.text ? [`${chatHeading}:`, '', chat.text, ''] : []),
     '---',
     `Submitted:    ${submittedAt}`,
     `IP:           ${ip}`,
@@ -360,6 +419,8 @@ async function deliverEnquiry({ name, email, phone, topic, description, ip, user
       </table>
       <h3 style="margin-top:24px;color:#7E57C2;">Enquiry Description</h3>
       <p style="white-space:pre-wrap;background:#f8fafc;padding:16px;border-radius:8px;">${escapeHtml(description)}</p>
+      ${chat.html ? `<h3 style="margin-top:24px;color:#7E57C2;">${escapeHtml(chatHeading)}</h3>
+      <div style="background:#f8fafc;padding:16px;border-radius:8px;font-size:14px;">${chat.html}</div>` : ''}
       <hr style="border:none;border-top:1px solid #e2e8f0;margin-top:24px;"/>
       <p style="color:#94a3b8;font-size:12px;">
         Submitted ${escapeHtml(submittedAt)}<br/>
@@ -413,9 +474,13 @@ app.get('/admin/api/status', adminAuth, (_req, res) => {
       resendKey: { set: !isPlaceholder(resend), masked: maskSecret(resend || '') },
       enquiryFromEmail: ENQUIRY_FROM_EMAIL,
       enquiryRecipient: ENQUIRY_RECIPIENT,
-      chatModel: CHAT_MODEL,
+      chatModel: `${NURA_MODEL.label} (${NURA_MODEL.id})`,
+      chatModelKey: NURA_MODEL.key,
+      chatEffort: NURA_MODEL.effort,
+      promptVersion: NURA_PROMPT_VERSION,
     },
     knowledgeBase: NURA_SYSTEM_PROMPT,
+    usage: nuraUsage.snapshot(),
     counts: { enquiries: enquiryLog.length, errors: errorLog.length },
   });
 });
@@ -436,10 +501,12 @@ app.post('/admin/api/test-anthropic', adminAuth, async (_req, res) => {
 
   try {
     const start = Date.now();
+    // Same model and effort as live chat; max_tokens leaves room for
+    // adaptive thinking on models that have it.
     const response = await client.messages.create({
-      model: CHAT_MODEL,
-      max_tokens: 10,
-      temperature: 0,
+      model: NURA_MODEL.id,
+      max_tokens: NURA_MODEL.maxTokens,
+      ...(NURA_MODEL.effort ? { output_config: { effort: NURA_MODEL.effort } } : {}),
       messages: [{ role: 'user', content: 'Reply with the single word: OK' }],
     });
     const ms = Date.now() - start;

@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, it, expect } from 'vitest';
-import { NURA_SYSTEM_PROMPT, buildSystemPrompt } from './prompt.js';
+import { NURA_SYSTEM_PROMPT, NURA_PROMPT_VERSION, buildSystemPrompt } from './prompt.js';
 import { languageDirective } from './language.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -41,11 +41,15 @@ describe('NURA_SYSTEM_PROMPT', () => {
 });
 
 describe('buildSystemPrompt', () => {
-  it('sends the stable prompt first and the per-turn language note last', () => {
+  it('sends the stable, cached prompt first and the per-turn language note last', () => {
     const blocks = buildSystemPrompt('ms');
     expect(blocks).toEqual([
-      { type: 'text', text: NURA_SYSTEM_PROMPT },
+      { type: 'text', text: NURA_SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } },
       { type: 'text', text: languageDirective('ms') },
     ]);
+  });
+
+  it('exposes a short, stable version id for logs and evals', () => {
+    expect(NURA_PROMPT_VERSION).toMatch(/^[0-9a-f]{8}$/);
   });
 });

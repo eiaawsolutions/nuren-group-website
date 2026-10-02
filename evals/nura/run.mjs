@@ -7,8 +7,11 @@
 //               --only id1,id2   --delay-ms 3200
 //
 // For a baseline, check out the previous version, start its server, and run
-// again with --label before. Transcripts and results are written to
-// evals/nura/results/<label>-<timestamp>.md. Exits 1 if any case fails.
+// again with --label before. To compare models, start a second server with
+// NURA_MODEL=sonnet on another port (PORT=3001) and run with
+// --base-url http://localhost:3001 --label sonnet. Transcripts and results
+// are written to evals/nura/results/<label>-<timestamp>.md. Exits 1 if any
+// case fails.
 //
 // Cost: about 30 model calls per pass (~$0.15 on Claude Haiku 4.5); --repeat
 // multiplies that. The server allows 20 chat requests a minute per IP, so

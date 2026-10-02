@@ -45,6 +45,22 @@ export function replyCopy(key, lang) {
 // the end, so "RM1.5K" and "nurengroup.com" don't count as sentence ends.
 const SENTENCE_END_RE = /[.!?…](?=\s|$|["'”’)])|[。！？]/g;
 
+/**
+ * The visitor-facing reply from a finished model message: text blocks only
+ * (thinking blocks are skipped), trimmed back to a full sentence if
+ * max_tokens cut it off, or localised fallback copy if there's no text.
+ */
+export function finalizeReply(message, lang) {
+  const text = (message.content ?? [])
+    .filter((block) => block.type === 'text')
+    .map((block) => block.text)
+    .join('\n')
+    .trim();
+  if (!text) return { reply: replyCopy('empty', lang), truncated: false };
+  if (message.stop_reason === 'max_tokens') return { reply: trimToLastSentence(text), truncated: true };
+  return { reply: text, truncated: false };
+}
+
 /** Cut a truncated reply back to its last complete sentence or line. */
 export function trimToLastSentence(text) {
   let cut = -1;
