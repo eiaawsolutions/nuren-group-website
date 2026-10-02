@@ -16,7 +16,8 @@
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "eval:nura": "node evals/nura/run.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.91.1",
