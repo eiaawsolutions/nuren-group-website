@@ -25,15 +25,22 @@ export const NURA_PROMPT_VERSION = crypto.createHash('sha256').update(NURA_SYSTE
 export const TURN_REMINDER =
   'For this reply: under about 60 words, at most one question, start with substance, and finish with the options line.';
 
+// Added for turns where the visitor asks for a price, proposal, budget plan
+// or meeting (see intent.js).
+export const TEAM_HINT =
+  'The visitor is asking for something only the team can give, such as a price, proposal or meeting: answer briefly, then name the **Talk to our team** button and say what to include (brand, goal, timing, budget range).';
+
 /**
  * System blocks for one chat turn: the stable prompt first, with a cache
- * breakpoint, then the per-turn language note and reminder, so the cached
- * prefix never changes between turns.
+ * breakpoint, then the per-turn note (language, reminder, optional team
+ * hint), so the cached prefix never changes between turns.
  * @param {'en' | 'ms' | 'zh'} lang
+ * @param {{ teamHint?: boolean }} [options]
  */
-export function buildSystemPrompt(lang) {
+export function buildSystemPrompt(lang, { teamHint = false } = {}) {
+  const note = [languageDirective(lang), TURN_REMINDER, ...(teamHint ? [TEAM_HINT] : [])].join('\n');
   return [
     { type: 'text', text: NURA_SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } },
-    { type: 'text', text: `${languageDirective(lang)}\n${TURN_REMINDER}` },
+    { type: 'text', text: note },
   ];
 }

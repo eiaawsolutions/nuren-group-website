@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, it, expect } from 'vitest';
-import { NURA_SYSTEM_PROMPT, NURA_PROMPT_VERSION, TURN_REMINDER, buildSystemPrompt } from './prompt.js';
+import { NURA_SYSTEM_PROMPT, NURA_PROMPT_VERSION, TURN_REMINDER, TEAM_HINT, buildSystemPrompt } from './prompt.js';
 import { languageDirective } from './language.js';
 import { OPTIONS_MARKER } from './replies.js';
 
@@ -62,5 +62,12 @@ ${TURN_REMINDER}` },
 
   it('exposes a short, stable version id for logs and evals', () => {
     expect(NURA_PROMPT_VERSION).toMatch(/^[0-9a-f]{8}$/);
+  });
+});
+
+describe('buildSystemPrompt team hint', () => {
+  it('adds the team hint only when asked', () => {
+    expect(buildSystemPrompt('en', { teamHint: true })[1].text).toContain(TEAM_HINT);
+    expect(buildSystemPrompt('en')[1].text).not.toContain(TEAM_HINT);
   });
 });

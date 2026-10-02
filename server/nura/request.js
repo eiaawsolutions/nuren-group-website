@@ -1,5 +1,6 @@
 // Builds the Messages API request for one chat turn.
 import { buildSystemPrompt } from './prompt.js';
+import { asksForTeam } from './intent.js';
 
 const MAX_MESSAGE_LENGTH = 1000;
 const MAX_HISTORY_REPLY_LENGTH = 2000;
@@ -33,7 +34,7 @@ export function buildChatRequest({ model, lang, history, message }) {
   return {
     model: model.id,
     max_tokens: model.maxTokens,
-    system: buildSystemPrompt(lang),
+    system: buildSystemPrompt(lang, { teamHint: asksForTeam(message) }),
     messages: toAnthropicMessages(history, message),
     cache_control: { type: 'ephemeral' },
     ...(model.effort ? { output_config: { effort: model.effort } } : {}),

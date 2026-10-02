@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { toAnthropicMessages, buildChatRequest } from './request.js';
-import { NURA_SYSTEM_PROMPT, TURN_REMINDER } from './prompt.js';
+import { NURA_SYSTEM_PROMPT, TURN_REMINDER, TEAM_HINT } from './prompt.js';
 import { languageDirective } from './language.js';
 import { resolveModelConfig } from './model.js';
 
@@ -76,5 +76,17 @@ ${TURN_REMINDER}` },
   it('never sends sampling parameters, which newer models reject', () => {
     const params = buildChatRequest({ model: sonnet, lang: 'en', history: [], message: 'Hi' });
     for (const key of ['temperature', 'top_p', 'top_k']) expect(params).not.toHaveProperty(key);
+  });
+});
+
+describe('buildChatRequest team hint', () => {
+  const haiku = resolveModelConfig({});
+  it('asks Nura to name the team button when the visitor wants a price or proposal', () => {
+    const params = buildChatRequest({ model: haiku, lang: 'en', history: [], message: 'We have RM50K, can you propose something?' });
+    expect(params.system[1].text).toContain(TEAM_HINT);
+  });
+  it('leaves the note alone for other questions', () => {
+    const params = buildChatRequest({ model: haiku, lang: 'en', history: [], message: "What's Kelab Mama?" });
+    expect(params.system[1].text).not.toContain(TEAM_HINT);
   });
 });
