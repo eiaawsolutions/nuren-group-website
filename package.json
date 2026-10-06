@@ -8,6 +8,8 @@
   },
   "scripts": {
     "dev": "vite --port=3000 --host=0.0.0.0",
+    "check:assets": "node scripts/check-assets.mjs",
+    "prebuild": "node scripts/check-assets.mjs",
     "build": "vite build && node scripts/prerender.mjs",
     "build:client": "vite build",
     "prerender": "node scripts/prerender.mjs",

@@ -1552,6 +1552,31 @@ const MediaHubPage = ({ onContactClick }: { onContactClick: () => void }) => {
 
 // --- Board of Directors Page ---
 
+// Shows initials instead of a broken-image icon if a portrait fails to load.
+const DirectorPhoto = ({ src, name }: { src: string; name: string }) => {
+  const [failed, setFailed] = useState(false);
+  if (failed || !src) {
+    const initials = name.replace(/^(Prof Dr|Dato|Mr|Ms)\s+/i, '').split(/[\s.]+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
+    return (
+      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-nuren-pink/20 to-nuren-purple/20 text-nuren-purple text-7xl font-bold font-display" role="img" aria-label={name}>
+        {initials}
+      </div>
+    );
+  }
+  return (
+    <img
+      src={src}
+      alt={name}
+      className="w-full h-full object-cover"
+      loading="lazy"
+      decoding="async"
+      referrerPolicy="no-referrer"
+      onError={() => setFailed(true)}
+    />
+  );
+};
+
+
 const BoardOfDirectorsPage = () => {
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -1561,7 +1586,7 @@ const BoardOfDirectorsPage = () => {
     {
       name: "Prof Dr K.Y. Wong",
       role: "Group Chairman, Independent Director",
-      image: "/prof-dr-wong.png",
+      image: "", // no portrait yet: /prof-dr-wong.png was actually Dato Eng
       bio: "Economist Prof Dr Wong, is Director of EUDA Health Holdings Limited (NASDAQ:EUDA), Director of E-Plus Ltd (NSX:8EP) and CEO of D'Mace Group Ltd (Singapore). He holds PhD from Strathclyde Business School (UK), postdoctoral at Peking University (China), BBA from Western Michigan University (USA) and M.Econ from University Putra (Malaysia). With a distinguished career as both scholar and corporate leader, Prof Dr Wong has held various executive positions in public listed companies, VP/deanship with universities, and lead consultant roles in several initiatives with ASEAN and UNWTO. From 2004 to 2016, he served as advisor to the government of Malaysia, SEA nations and China. In 2010, he led the National Key Economic Area EPP10, an essential component of Malaysia's Economic Transformation Program under the Prime Minister's Office. Prof Dr Wong's significant experience in the fields of business, economic policy and planning, showcase his ability to provide strategic guidance as Chairman of Nuren Group."
     },
     {
@@ -1651,14 +1676,7 @@ const BoardOfDirectorsPage = () => {
               >
                 <div className="w-full md:w-1/3">
                   <div className="relative aspect-[4/5] rounded-[40px] overflow-hidden shadow-2xl shadow-slate-200">
-                    <img
-                      src={director.image}
-                      alt={director.name}
-                      className="w-full h-full object-cover"
-                      loading="lazy"
-                      decoding="async"
-                      referrerPolicy="no-referrer"
-                    />
+                    <DirectorPhoto src={director.image} name={director.name} />
                   </div>
                 </div>
                 <div className="w-full md:w-2/3">
