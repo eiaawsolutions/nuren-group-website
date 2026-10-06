@@ -1586,7 +1586,7 @@ const BoardOfDirectorsPage = () => {
     {
       name: "Prof Dr K.Y. Wong",
       role: "Group Chairman, Independent Director",
-      image: "", // no portrait yet: /prof-dr-wong.png was actually Dato Eng
+      image: "/prof-dr-wong.png",
       bio: "Economist Prof Dr Wong, is Director of EUDA Health Holdings Limited (NASDAQ:EUDA), Director of E-Plus Ltd (NSX:8EP) and CEO of D'Mace Group Ltd (Singapore). He holds PhD from Strathclyde Business School (UK), postdoctoral at Peking University (China), BBA from Western Michigan University (USA) and M.Econ from University Putra (Malaysia). With a distinguished career as both scholar and corporate leader, Prof Dr Wong has held various executive positions in public listed companies, VP/deanship with universities, and lead consultant roles in several initiatives with ASEAN and UNWTO. From 2004 to 2016, he served as advisor to the government of Malaysia, SEA nations and China. In 2010, he led the National Key Economic Area EPP10, an essential component of Malaysia's Economic Transformation Program under the Prime Minister's Office. Prof Dr Wong's significant experience in the fields of business, economic policy and planning, showcase his ability to provide strategic guidance as Chairman of Nuren Group."
     },
     {
