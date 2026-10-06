@@ -1604,7 +1604,7 @@ const BoardOfDirectorsPage = () => {
     {
       name: "Dato Y.K. Eng",
       role: "Independent, Non-Executive Director",
-      image: "/datoeng.png",
+      image: "/dato-eng-2.png",
       bio: "Dato Eng is a prominent entrepreneur in Malaysia, particularly noted for his contributions to the confinement care industry and women's wellness. He began his entrepreneurial journey at 18, after graduating from high school in 2002. Mr Yee Koon Eng and his wife established Cozzi Confinement Centre (“Cozzi”) in 2017, providing affordable postnatal care including baby care, mother care, nutritious meals, and professional guidance. The success of the initial centre prompted further expansions of 5 centres to date. Cozzi has also focused on maternal education, organizing over 25 talks since 2021 on topics related to women and baby wellness. In 2021, Dato Eng acquired stakes in Itsherbs (“IH”), which addresses women's fertility concerns through Traditional Chinese Medicine and serves over 30,000 customers. In 2022, Dato Eng was also appointed as an advisor to Tradisi Bidan House (“TBH Wellness”), a company offering traditional postnatal massages. Under Dato Eng's leadership, Cozzi and his associated ventures continue to provide comprehensive wellness services for women in Malaysia."
     },
     {
