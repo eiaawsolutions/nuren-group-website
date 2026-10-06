@@ -28,7 +28,7 @@ export const TURN_REMINDER =
 // Added for turns where the visitor asks for a price, proposal, budget plan
 // or meeting (see intent.js).
 export const TEAM_HINT =
-  'The visitor is asking for something only the team can give, such as a price, proposal or meeting: answer briefly, then name the **Talk to our team** button and say what to include (brand, goal, timing, budget range).';
+  'The visitor is asking for something only the team can give, such as a price, proposal or meeting: answer briefly, then name the **Talk to our team** button and say what to include (brand, goal, audience, timing, budget range, and a brief file if they have one).';
 
 /**
  * System blocks for one chat turn: the stable prompt first, with a cache

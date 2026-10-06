@@ -8,3 +8,6 @@ coverage/
 !.env.example
 .claude/
 evals/nura/results/
+
+# Submitted enquiries and attached briefs (see LEADS_DIR)
+data/

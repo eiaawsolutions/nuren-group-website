@@ -7,8 +7,9 @@
 const PATTERNS = [
   /\b(?:prices?|pricing|costs?|how much|rate ?cards?|quotes?|quotation|proposals?|propose|media plan|budget|meeting|meet up)\b/i,
   /\bRM\s?\d/i,
-  /\b(?:harga|kos|berapa|sebut ?harga|bajet|pakej|cadangan|mesyuarat)\b/i,
-  /报价|价格|价钱|多少钱|预算|方案|提案|收费|费用/,
+  /\b(?:brief|attach(?:ment|ed)?|upload)\b/i,
+  /\b(?:harga|kos|berapa|sebut ?harga|bajet|pakej|cadangan|mesyuarat|taklimat|lampir|muat naik)\b/i,
+  /报价|价格|价钱|多少钱|预算|方案|提案|收费|费用|简报|附件|上传/,
 ];
 
 /** True when the visitor is asking for pricing, a proposal, a budget plan or a meeting. */

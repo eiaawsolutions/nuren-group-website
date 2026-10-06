@@ -1,9 +1,10 @@
-import { useState, useEffect, FormEvent } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { BrowserRouter, Routes, Route, Link, useLocation, useParams } from 'react-router-dom';
 import { Helmet, HelmetProvider } from 'react-helmet-async';
 import { governanceDocs } from './data/governanceDocs';
 import { Chatbot } from './components/Chatbot/Chatbot';
+import { ContactModal } from './components/Enquiry/ContactModal';
 import { AdminPage } from './components/Admin/AdminPage';
 import { HeroLanding } from './components/Hero/HeroLanding';
 import { 
@@ -91,155 +92,6 @@ const VideoModal = ({ isOpen, onClose, videoUrl }: { isOpen: boolean, onClose: (
             referrerPolicy="strict-origin-when-cross-origin"
             allowFullScreen
           ></iframe>
-        </motion.div>
-      </motion.div>
-    </AnimatePresence>
-  );
-};
-
-const ContactModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) => {
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    message: '',
-    services: [] as string[]
-  });
-  const [errors, setErrors] = useState({
-    name: false,
-    email: false,
-    message: false
-  });
-
-  const servicesList = [
-    'Parenting Platform Advertising',
-    'Ibuencer Influencer Marketing',
-    'Motherhood Marketplace',
-    'Data Insights & Analytics',
-    'Offline Events & Sampling',
-    'Others'
-  ];
-
-  const handleCheckboxChange = (service: string) => {
-    setFormData(prev => ({
-      ...prev,
-      services: prev.services.includes(service)
-        ? prev.services.filter(s => s !== service)
-        : [...prev.services, service]
-    }));
-  };
-
-  const handleSubmit = (e: FormEvent) => {
-    e.preventDefault();
-    
-    const newErrors = {
-      name: !formData.name.trim(),
-      email: !formData.email.trim(),
-      message: !formData.message.trim()
-    };
-    
-    setErrors(newErrors);
-
-    if (newErrors.name || newErrors.email || newErrors.message) {
-      return;
-    }
-
-    const servicesText = formData.services.length > 0 ? formData.services.join(', ') : 'None selected';
-    const whatsappMessage = `NEW INQUIRY\nName: ${formData.name}\nEmail: ${formData.email}\nServices: ${servicesText}\nMessage: ${formData.message}`;
-    const encodedMessage = encodeURIComponent(whatsappMessage);
-    const whatsappUrl = `https://wa.me/60124238768?text=${encodedMessage}`;
-    
-    window.open(whatsappUrl, '_blank');
-    onClose();
-  };
-
-  if (!isOpen) return null;
-
-  return (
-    <AnimatePresence>
-      <motion.div 
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
-        onClick={onClose}
-      >
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.9, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.9, y: 20 }}
-          className="relative w-full max-w-lg bg-white rounded-3xl overflow-hidden shadow-2xl"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className="p-8">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-slate-900">Contact Us</h2>
-              <button onClick={onClose} aria-label="Close contact form" className="text-slate-400 hover:text-slate-600 transition-colors">
-                <X size={24} />
-              </button>
-            </div>
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1">Name *</label>
-                <input 
-                  type="text" 
-                  value={formData.name}
-                  onChange={(e) => setFormData({...formData, name: e.target.value})}
-                  className={`w-full px-4 py-3 rounded-xl border ${errors.name ? 'border-red-500' : 'border-slate-200'} focus:ring-2 focus:ring-nuren-pink focus:border-transparent outline-none transition-all`}
-                  placeholder="Your full name"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1">Email *</label>
-                <input 
-                  type="email" 
-                  value={formData.email}
-                  onChange={(e) => setFormData({...formData, email: e.target.value})}
-                  className={`w-full px-4 py-3 rounded-xl border ${errors.email ? 'border-red-500' : 'border-slate-200'} focus:ring-2 focus:ring-nuren-pink focus:border-transparent outline-none transition-all`}
-                  placeholder="your@email.com"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">Services Needed</label>
-                <div className="grid grid-cols-1 gap-2">
-                  {servicesList.map(service => (
-                    <label key={service} className="flex items-center gap-3 cursor-pointer group">
-                      <div className="relative flex items-center">
-                        <input 
-                          type="checkbox" 
-                          checked={formData.services.includes(service)}
-                          onChange={() => handleCheckboxChange(service)}
-                          className="peer h-5 w-5 cursor-pointer appearance-none rounded border border-slate-300 checked:border-nuren-pink checked:bg-nuren-pink transition-all"
-                        />
-                        <CheckCircle2 size={14} className="absolute left-0.5 text-white opacity-0 peer-checked:opacity-100 transition-opacity" />
-                      </div>
-                      <span className="text-sm text-slate-600 group-hover:text-slate-900 transition-colors">{service}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1">Message *</label>
-                <textarea 
-                  value={formData.message}
-                  onChange={(e) => setFormData({...formData, message: e.target.value})}
-                  className={`w-full px-4 py-3 rounded-xl border ${errors.message ? 'border-red-500' : 'border-slate-200'} focus:ring-2 focus:ring-nuren-pink focus:border-transparent outline-none transition-all h-32 resize-none`}
-                  placeholder="Tell us about your requirements..."
-                />
-              </div>
-
-              <button 
-                type="submit"
-                className="w-full bg-nuren-pink text-white py-4 rounded-xl font-bold text-lg shadow-lg shadow-nuren-pink/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2"
-              >
-                Submit via WhatsApp
-                <Zap size={20} fill="currentColor" />
-              </button>
-            </form>
-          </div>
         </motion.div>
       </motion.div>
     </AnimatePresence>

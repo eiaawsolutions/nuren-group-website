@@ -1,5 +1,6 @@
 import { useState, useEffect, FormEvent } from 'react';
 import { Helmet } from 'react-helmet-async';
+import { LeadsPanel, type Lead } from './LeadsPanel';
 
 interface Status {
   settings: {
@@ -7,6 +8,7 @@ interface Status {
     resendKey: { set: boolean; masked: string };
     enquiryFromEmail: string;
     enquiryRecipient: string;
+    leadStorage: { persistent: boolean; writable: boolean; dir: string };
     chatModel: string;
     chatModelKey: string;
     chatEffort: string | null;
@@ -41,17 +43,6 @@ const formatBreakdown = (counts: Record<string, number>) =>
     .map(([key, n]) => `${key} ${formatCount(n)}`)
     .join(' · ') || '—';
 
-interface EnquiryEntry {
-  ts: string;
-  name: string;
-  emailHash: string;
-  topic: string;
-  descriptionPreview: string;
-  // Messages from the Nura chat attached to the email (0 if none); older entries lack it.
-  chatTurns?: number;
-  delivery: string;
-}
-
 interface ErrorEntry {
   ts: string;
   scope: string;
@@ -71,9 +62,9 @@ export function AdminPage() {
   const [loginBusy, setLoginBusy] = useState(false);
 
   const [status, setStatus] = useState<Status | null>(null);
-  const [enquiries, setEnquiries] = useState<EnquiryEntry[]>([]);
+  const [leads, setLeads] = useState<Lead[]>([]);
   const [errors, setErrors] = useState<ErrorEntry[]>([]);
-  const [tab, setTab] = useState<'overview' | 'kb' | 'enquiries' | 'errors'>('overview');
+  const [tab, setTab] = useState<'overview' | 'kb' | 'leads' | 'errors'>('overview');
   const [testAnthropicResult, setTestAnthropicResult] = useState<string>('');
   const [testEnquiryResult, setTestEnquiryResult] = useState<string>('');
   const [refreshing, setRefreshing] = useState(false);
@@ -82,12 +73,12 @@ export function AdminPage() {
     const headers = { Authorization: authHeader(pw) };
     const [s, e, x] = await Promise.all([
       fetch('/admin/api/status', { headers }),
-      fetch('/admin/api/enquiries', { headers }),
+      fetch('/admin/api/leads', { headers }),
       fetch('/admin/api/errors', { headers }),
     ]);
     if (!s.ok) throw new Error(`status ${s.status}`);
     setStatus(await s.json());
-    setEnquiries((await e.json()).enquiries || []);
+    setLeads((await e.json()).leads || []);
     setErrors((await x.json()).errors || []);
   }
 
@@ -157,7 +148,7 @@ export function AdminPage() {
     setAuthed(false);
     setPassword('');
     setStatus(null);
-    setEnquiries([]);
+    setLeads([]);
     setErrors([]);
   }
 
@@ -220,7 +211,7 @@ export function AdminPage() {
           </div>
         </div>
         <div className="max-w-6xl mx-auto px-6 flex gap-1 -mb-px">
-          {(['overview', 'kb', 'enquiries', 'errors'] as const).map((t) => (
+          {(['overview', 'kb', 'leads', 'errors'] as const).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -230,7 +221,7 @@ export function AdminPage() {
             >
               {t === 'overview' && 'Overview'}
               {t === 'kb' && 'Knowledge base'}
-              {t === 'enquiries' && `Enquiries (${enquiries.length})`}
+              {t === 'leads' && `Leads (${leads.length})`}
               {t === 'errors' && `Errors (${errors.length})`}
             </button>
           ))}
@@ -314,7 +305,7 @@ export function AdminPage() {
                 </div>
               </div>
               <p className="mt-4 text-xs text-slate-500">
-                Test enquiries deliver to the configured recipient (or log to stdout if Resend is not set), and appear in the Enquiries tab as <code>Admin Test</code>.
+                Test enquiries deliver to the configured recipient (or log to stdout if Resend is not set), and appear in the Leads tab as <code>Admin test</code>.
               </p>
             </section>
 
@@ -347,34 +338,7 @@ export function AdminPage() {
           </div>
         )}
 
-        {tab === 'enquiries' && (
-          <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
-            {enquiries.length === 0 ? (
-              <div className="p-8 text-center text-slate-500 text-sm">No enquiries yet. Last 50 only, resets on redeploy. Email is hashed; full enquiry goes to the configured recipient via Resend.</div>
-            ) : (
-              <ul className="divide-y divide-slate-800">
-                {enquiries.map((e, idx) => (
-                  <li key={idx} className="p-5">
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <div className="text-sm font-medium">{e.name} <span className="text-slate-500">·</span> <span className="font-mono text-xs text-slate-500" title="SHA-256 prefix of email — full address went to Petrina via email">email#{e.emailHash}</span></div>
-                        <div className="text-xs text-slate-500">{new Date(e.ts).toLocaleString()}</div>
-                      </div>
-                      <span className={`text-xs px-2 py-1 rounded ${e.delivery === 'sent' ? 'bg-emerald-500/10 text-emerald-400' : e.delivery === 'logged' ? 'bg-amber-500/10 text-amber-400' : 'bg-rose-500/10 text-rose-400'}`}>
-                        {e.delivery}
-                      </span>
-                    </div>
-                    <div className="mt-2 text-sm text-slate-300"><strong className="text-slate-400">Topic:</strong> {e.topic}</div>
-                    <div className="mt-1 text-sm text-slate-400">{e.descriptionPreview}{e.descriptionPreview.length >= 80 && '…'}</div>
-                    {!!e.chatTurns && (
-                      <div className="mt-1 text-xs text-slate-500">Nura chat attached ({e.chatTurns} messages)</div>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        )}
+        {tab === 'leads' && <LeadsPanel leads={leads} storage={status.settings.leadStorage} authHeader={authHeader(password)} />}
 
         {tab === 'errors' && (
           <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">

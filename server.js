@@ -14,7 +14,11 @@ import { resolveModelConfig } from './server/nura/model.js';
 import { buildChatRequest } from './server/nura/request.js';
 import { createUsageTracker } from './server/nura/usage.js';
 import { buildBriefRequest, parseBrief } from './server/nura/brief.js';
-import { sanitizeTranscript, renderTranscript } from './server/nura/transcript.js';
+import { sanitizeTranscript } from './server/nura/transcript.js';
+import { validateEnquiry } from './server/leads/enquiry.js';
+import { sanitizeAttachment, MAX_ENQUIRY_BODY } from './server/leads/attachment.js';
+import { createLeadStore } from './server/leads/store.js';
+import { renderLeadEmail, leadsToCsv } from './server/leads/format.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT) || 3000;
@@ -22,7 +26,11 @@ const DIST_DIR = path.join(__dirname, 'dist');
 
 const ENQUIRY_RECIPIENT = process.env.ENQUIRY_RECIPIENT || 'petrina.goh@nurengroup.com';
 const ENQUIRY_FROM_EMAIL = process.env.ENQUIRY_FROM_EMAIL || 'Nuren Group Website <onboarding@resend.dev>';
-const ENQUIRY_SUBJECT_PREFIX = 'Nuren Group Website Enquiry';
+// Optional comma-separated extra recipients (the sales team) on every lead email.
+const ENQUIRY_CC = (process.env.ENQUIRY_CC || '').split(',').map((e) => e.trim()).filter(Boolean);
+// Leads and attached briefs are written here. Point it at a Railway volume to
+// keep them across deploys; otherwise they last until the next redeploy.
+const LEADS_DIR = process.env.LEADS_DIR || path.join(__dirname, 'data');
 
 // Nura's prompt, model registry, request building, language handling and
 // usage tracking live in server/nura/. NURA_MODEL picks the model by key
@@ -59,7 +67,6 @@ const allowAdmin = createRateLimiter({ windowMs: ADMIN_RATE_WINDOW_MS, max: ADMI
 // Each failed login re-sets this entry and so extends the lockout; that's intended.
 const adminFailures = new LRUCache({ max: 1000, ttl: ADMIN_LOCKOUT_WINDOW_MS });
 
-const enquiryLog = [];
 const errorLog = [];
 
 function pushRing(buffer, item) {
@@ -71,6 +78,8 @@ function logError(scope, detail) {
   pushRing(errorLog, { ts: new Date().toISOString(), scope, detail: String(detail).slice(0, 500) });
   console.error(`[${scope}]`, detail);
 }
+
+const leadStore = createLeadStore({ dir: LEADS_DIR, onError: logError });
 
 // Trust Express's req.ip — with `app.set('trust proxy', true)`, it walks the
 // X-Forwarded-For chain correctly. Reading XFF directly is spoofable: any
@@ -188,6 +197,20 @@ app.use(helmet({
   referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
 }));
 
+// An enquiry can carry an attached brief, so it gets a larger body limit than
+// the rest of the API. The per-IP rate limit runs first, before the body is
+// read, so an abuser can't make the server buffer megabytes on every request.
+app.use(
+  '/api/enquiry',
+  (req, res, next) => {
+    if (req.method === 'POST' && !allowEnquiry(clientIp(req))) {
+      return res.status(429).json({ error: 'Too many submissions. Please try again later.' });
+    }
+    return next();
+  },
+  express.json({ limit: MAX_ENQUIRY_BODY }),
+);
+
 app.use(express.json({ limit: '64kb' }));
 
 app.get('/healthz', (_req, res) => {
@@ -303,7 +326,7 @@ app.post('/api/chat/brief', async (req, res) => {
   try {
     const message = await client.messages.create(buildBriefRequest({ model: NURA_MODEL, lang, history }));
     logUsage({ route: 'brief', lang, message, latencyMs: Date.now() - started });
-    const brief = parseBrief(message);
+    const brief = parseBrief(message, history);
     if (!brief) {
       logError('brief:unparseable', `stop_reason=${message.stop_reason}`);
       return res.status(502).json({ error: 'Could not draft the enquiry.' });
@@ -319,60 +342,26 @@ app.post('/api/chat/brief', async (req, res) => {
 
 app.post('/api/enquiry', async (req, res) => {
   const ip = clientIp(req);
-  if (!allowEnquiry(ip)) {
-    return res.status(429).json({ error: 'Too many submissions. Please try again later.' });
-  }
-
   const payload = req.body && typeof req.body === 'object' ? req.body : {};
 
   if (typeof payload.website === 'string' && payload.website.trim() !== '') {
     return res.json({ ok: true });
   }
 
-  const name = String(payload.name || '').trim().slice(0, 120);
-  const email = String(payload.email || '').trim().slice(0, 200);
-  const phone = String(payload.phone || '').trim().slice(0, 40);
-  // Strip CR/LF: topic is interpolated into the email Subject — newlines
-  // would enable RFC 5322 header injection (Bcc:, additional From:, etc).
-  const topic = String(payload.topic || '').replace(/[\r\n]+/g, ' ').trim().slice(0, 160);
-  const description = String(payload.description || '').trim().slice(0, 4000);
-  // Present only when the visitor ticked "include my chat"; capped and escaped.
-  const transcript = sanitizeTranscript(payload.transcript);
-
-  const errors = {};
-  if (!name) errors.name = 'Name is required.';
-  if (!email) errors.email = 'Email is required.';
-  else if (!isEmail(email)) errors.email = 'Please enter a valid email.';
-  if (!phone) errors.phone = 'Phone is required.';
-  if (!topic) errors.topic = 'Topic is required.';
-  if (!description) errors.description = 'Please describe your enquiry.';
-
+  const { value, errors } = validateEnquiry(payload);
+  const file = sanitizeAttachment(payload.attachment);
+  if (file.error) errors.attachment = file.error;
   if (Object.keys(errors).length > 0) {
     return res.status(400).json({ error: 'Validation failed.', errors });
   }
 
-  const result = await deliverEnquiry({
-    name, email, phone, topic, description, transcript, ip,
+  const result = await submitLead({
+    ...value,
+    // Present only when the visitor ticked "include my chat"; capped and escaped.
+    transcript: sanitizeTranscript(payload.transcript),
+    attachment: file.attachment,
+    ip,
     userAgent: String(req.headers['user-agent'] || 'unknown'),
-    submittedAt: new Date().toISOString(),
-  });
-
-  // Minimise PII in the in-memory ring buffer: full name + topic + delivery
-  // status are the only ops-useful fields. Email is hashed (12-char SHA-256
-  // prefix is enough to dedupe / spot abuse without leaking the address);
-  // phone, IP, full description, user-agent are dropped. Anyone with admin
-  // access used to see every visitor's full contact details — overkill for
-  // a marketing-site superadmin viewer. Full payload still flows to Petrina
-  // via Resend.
-  pushRing(enquiryLog, {
-    ts: result.submittedAt,
-    name,
-    emailHash: crypto.createHash('sha256').update(email.toLowerCase()).digest('hex').slice(0, 12),
-    topic,
-    descriptionPreview: description.slice(0, 80),
-    // The transcript itself only goes to the email, never into this buffer.
-    chatTurns: transcript.length,
-    delivery: result.delivery,
   });
 
   if (result.error) {
@@ -381,56 +370,31 @@ app.post('/api/enquiry', async (req, res) => {
   return res.json({ ok: true, delivery: result.delivery });
 });
 
-async function deliverEnquiry({ name, email, phone, topic, description, transcript = [], ip, userAgent, submittedAt }) {
-  const subject = `${ENQUIRY_SUBJECT_PREFIX}: ${topic}`;
-  const chat = renderTranscript(transcript);
-  const chatHeading = `Chat with Nura (${transcript.length} messages, shared by the visitor)`;
-  const textBody = [
-    'A new enquiry was submitted via the Nuren Group website chatbot.',
-    '',
-    `Topic:        ${topic}`,
-    `Name:         ${name}`,
-    `Email:        ${email}`,
-    `Phone:        ${phone}`,
-    '',
-    'Description:',
-    description,
-    '',
-    ...(chat.text ? [`${chatHeading}:`, '', chat.text, ''] : []),
-    '---',
-    `Submitted:    ${submittedAt}`,
-    `IP:           ${ip}`,
-    `User-Agent:   ${userAgent}`,
-  ].join('\n');
+// Emails the team, then keeps a copy for the dashboard. The lead is saved even
+// when the email fails, so it can still be followed up from the dashboard.
+async function submitLead({ attachment, ip, userAgent, ...fields }) {
+  const lead = {
+    id: crypto.randomUUID(),
+    ts: new Date().toISOString(),
+    ...fields,
+    attachment: attachment
+      ? { filename: attachment.filename, mime: attachment.mime, size: attachment.buffer.length }
+      : null,
+  };
 
-  const htmlBody = `
-    <div style="font-family:Inter,Arial,sans-serif;color:#0f172a;max-width:600px;">
-      <h2 style="color:#FF6B9E;margin-bottom:4px;">New Website Enquiry</h2>
-      <p style="color:#64748b;margin-top:0;">Submitted via the nurengroup.com chatbot</p>
-      <table style="border-collapse:collapse;width:100%;margin-top:16px;">
-        <tr><td style="padding:6px 12px;background:#f8fafc;font-weight:600;width:120px;">Topic</td><td style="padding:6px 12px;">${escapeHtml(topic)}</td></tr>
-        <tr><td style="padding:6px 12px;background:#f8fafc;font-weight:600;">Name</td><td style="padding:6px 12px;">${escapeHtml(name)}</td></tr>
-        <tr><td style="padding:6px 12px;background:#f8fafc;font-weight:600;">Email</td><td style="padding:6px 12px;"><a href="mailto:${escapeHtml(email)}">${escapeHtml(email)}</a></td></tr>
-        <tr><td style="padding:6px 12px;background:#f8fafc;font-weight:600;">Phone</td><td style="padding:6px 12px;">${escapeHtml(phone)}</td></tr>
-      </table>
-      <h3 style="margin-top:24px;color:#7E57C2;">Enquiry Description</h3>
-      <p style="white-space:pre-wrap;background:#f8fafc;padding:16px;border-radius:8px;">${escapeHtml(description)}</p>
-      ${chat.html ? `<h3 style="margin-top:24px;color:#7E57C2;">${escapeHtml(chatHeading)}</h3>
-      <div style="background:#f8fafc;padding:16px;border-radius:8px;font-size:14px;">${chat.html}</div>` : ''}
-      <hr style="border:none;border-top:1px solid #e2e8f0;margin-top:24px;"/>
-      <p style="color:#94a3b8;font-size:12px;">
-        Submitted ${escapeHtml(submittedAt)}<br/>
-        IP ${escapeHtml(ip)}<br/>
-        User-Agent ${escapeHtml(userAgent)}
-      </p>
-    </div>
-  `;
+  const result = await deliverLeadEmail(lead, attachment, { ip, userAgent });
+  leadStore.add({ ...lead, delivery: result.delivery }, attachment);
+  return result;
+}
+
+async function deliverLeadEmail(lead, attachment, meta) {
+  const { subject, text, html } = renderLeadEmail(lead, meta);
 
   const resendKey = process.env.RESEND_API_KEY;
   if (isPlaceholder(resendKey)) {
     console.warn('[enquiry] RESEND_API_KEY not set — logging enquiry instead of emailing.');
-    console.log('[enquiry:pending-email]', JSON.stringify({ to: ENQUIRY_RECIPIENT, subject, textBody }));
-    return { delivery: 'logged', submittedAt };
+    console.log('[enquiry:pending-email]', JSON.stringify({ to: ENQUIRY_RECIPIENT, subject, text }));
+    return { delivery: 'logged' };
   }
 
   try {
@@ -440,22 +404,26 @@ async function deliverEnquiry({ name, email, phone, topic, description, transcri
       body: JSON.stringify({
         from: ENQUIRY_FROM_EMAIL,
         to: [ENQUIRY_RECIPIENT],
-        reply_to: email,
+        ...(ENQUIRY_CC.length ? { cc: ENQUIRY_CC } : {}),
+        reply_to: lead.email,
         subject,
-        text: textBody,
-        html: htmlBody,
+        text,
+        html,
+        ...(attachment
+          ? { attachments: [{ filename: attachment.filename, content: attachment.buffer.toString('base64') }] }
+          : {}),
       }),
     });
 
     if (!upstream.ok) {
       const detail = await upstream.text();
       logError('enquiry:resend', `${upstream.status} ${detail}`);
-      return { error: 'Could not deliver enquiry. Please try again or email us directly.', status: 502, delivery: 'failed', submittedAt };
+      return { error: 'Could not deliver enquiry. Please try again or email us directly.', status: 502, delivery: 'failed' };
     }
-    return { delivery: 'sent', submittedAt };
+    return { delivery: 'sent' };
   } catch (err) {
     logError('enquiry:exception', err?.message || err);
-    return { error: 'Something went wrong. Please try again.', status: 500, delivery: 'failed', submittedAt };
+    return { error: 'Something went wrong. Please try again.', status: 500, delivery: 'failed' };
   }
 }
 
@@ -469,7 +437,13 @@ app.get('/admin/api/status', adminAuth, (_req, res) => {
       anthropicKey: { set: !isPlaceholder(anthropic), masked: maskSecret(anthropic || '') },
       resendKey: { set: !isPlaceholder(resend), masked: maskSecret(resend || '') },
       enquiryFromEmail: ENQUIRY_FROM_EMAIL,
-      enquiryRecipient: ENQUIRY_RECIPIENT,
+      enquiryRecipient: [ENQUIRY_RECIPIENT, ...ENQUIRY_CC].join(', '),
+      leadStorage: {
+        // A working disk isn't enough: only a mounted volume survives a redeploy.
+        persistent: leadStore.writable && Boolean(process.env.LEADS_DIR),
+        writable: leadStore.writable,
+        dir: LEADS_DIR,
+      },
       chatModel: `${NURA_MODEL.label} (${NURA_MODEL.id})`,
       chatModelKey: NURA_MODEL.key,
       chatEffort: NURA_MODEL.effort,
@@ -477,12 +451,34 @@ app.get('/admin/api/status', adminAuth, (_req, res) => {
     },
     knowledgeBase: NURA_SYSTEM_PROMPT,
     usage: nuraUsage.snapshot(),
-    counts: { enquiries: enquiryLog.length, errors: errorLog.length },
+    counts: { enquiries: leadStore.list().length, errors: errorLog.length },
   });
 });
 
-app.get('/admin/api/enquiries', adminAuth, (_req, res) => {
-  res.json({ enquiries: enquiryLog });
+app.get('/admin/api/leads', adminAuth, (_req, res) => {
+  res.json({ leads: leadStore.list() });
+});
+
+app.get('/admin/api/leads.csv', adminAuth, (_req, res) => {
+  res.set({
+    'Content-Type': 'text/csv; charset=utf-8',
+    'Content-Disposition': `attachment; filename="nuren-leads-${new Date().toISOString().slice(0, 10)}.csv"`,
+    'Cache-Control': 'no-store',
+  });
+  res.send(leadsToCsv(leadStore.list()));
+});
+
+app.get('/admin/api/leads/:id/attachment', adminAuth, (req, res) => {
+  const file = leadStore.readAttachment(req.params.id);
+  if (!file) return res.status(404).json({ error: 'No attached brief for this lead.' });
+  // Served as a download, never rendered: the file is whatever a visitor uploaded.
+  res.set({
+    'Content-Type': file.mime,
+    'Content-Disposition': `attachment; filename="${file.filename}"`,
+    'X-Content-Type-Options': 'nosniff',
+    'Cache-Control': 'no-store',
+  });
+  return res.send(file.buffer);
 });
 
 app.get('/admin/api/errors', adminAuth, (_req, res) => {
@@ -522,16 +518,15 @@ app.post('/admin/api/test-anthropic', adminAuth, async (_req, res) => {
 });
 
 app.post('/admin/api/test-enquiry', adminAuth, async (_req, res) => {
-  const result = await deliverEnquiry({
+  const { value } = validateEnquiry({
+    type: 'other',
     name: 'Admin Test',
     email: 'admin-test@nurengroup.com',
-    phone: '+60-000-0000',
-    topic: 'Admin test enquiry',
-    description: 'This is a test enquiry triggered from the /admin page to verify Resend delivery.',
-    ip: 'admin-page',
-    userAgent: 'admin-test',
-    submittedAt: new Date().toISOString(),
+    phone: '+60 000 0000',
+    company: 'Admin test',
+    message: 'This is a test enquiry triggered from the /admin page to verify Resend delivery.',
   });
+  const result = await submitLead({ ...value, transcript: [], attachment: null, ip: 'admin-page', userAgent: 'admin-test' });
   if (result.error) return res.status(result.status || 502).json({ ok: false, error: result.error, delivery: result.delivery });
   return res.json({ ok: true, delivery: result.delivery });
 });
@@ -564,6 +559,18 @@ app.use((req, res) => {
     res.set('X-Robots-Tag', 'noindex, nofollow');
   }
   res.sendFile(path.join(DIST_DIR, 'index.html'));
+});
+
+// Last resort for errors thrown by middleware (an oversized or malformed JSON
+// body, for example). Without this Express answers with an HTML page that
+// includes a stack trace whenever NODE_ENV isn't "production".
+app.use((err, _req, res, next) => {
+  if (res.headersSent) return next(err);
+  const status = err?.status || err?.statusCode;
+  if (status === 413) return res.status(413).json({ error: 'That request is too large.' });
+  if (status >= 400 && status < 500) return res.status(status).json({ error: 'Invalid request.' });
+  logError('server', err?.message || err);
+  return res.status(500).json({ error: 'Something went wrong.' });
 });
 
 app.listen(PORT, '0.0.0.0', () => {

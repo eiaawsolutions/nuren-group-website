@@ -8,6 +8,8 @@ describe('asksForTeam', () => {
       'We have RM50K for a 3-month campaign starting next month. Can you propose something?',
       'Do you have a rate card?',
       'Can we set up a meeting?',
+      "Here's my brief",
+      'Where can I upload our brief?',
       "What's the pricing for KOL?",
     ]) {
       expect(asksForTeam(message), message).toBe(true);

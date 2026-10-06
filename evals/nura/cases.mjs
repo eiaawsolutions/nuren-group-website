@@ -50,6 +50,15 @@ export const CASES = [
     includes: [CTA],
   },
   {
+    // Petrina's follow-up: a visitor with a brief should be told to attach it
+    // in the team form, not to paste it here (Nura can't open files).
+    id: 'brief-attach',
+    turns: ["Here's my brief"],
+    lang: 'en',
+    includes: [CTA, /attach/i],
+    excludes: [/paste/i],
+  },
+  {
     id: 'list-platforms',
     turns: ['Can you list your platforms?'],
     lang: 'en',

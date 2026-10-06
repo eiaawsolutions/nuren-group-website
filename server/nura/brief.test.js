@@ -8,10 +8,26 @@ const haiku = resolveModelConfig({});
 const sonnet = resolveModelConfig({ NURA_MODEL: 'sonnet' });
 const reply = (text, stop_reason = 'end_turn') => ({ stop_reason, content: [{ type: 'text', text }] });
 
+const FIELDS = ['message', 'type', 'company', 'audience', 'period', 'budget', 'name', 'email', 'phone'];
+const draft = (over = {}) => ({
+  message: 'We are launching a baby skincare line.',
+  type: '',
+  company: '',
+  audience: '',
+  period: '',
+  budget: '',
+  name: '',
+  email: '',
+  phone: '',
+  ...over,
+});
+const replyWith = (over) => reply(JSON.stringify(draft(over)));
+
 describe('BRIEF_SCHEMA', () => {
-  it('is a closed object with both fields required (structured-output compatible)', () => {
+  it('is a closed object with every field required (structured-output compatible)', () => {
     expect(BRIEF_SCHEMA.additionalProperties).toBe(false);
-    expect(BRIEF_SCHEMA.required).toEqual(['topic', 'description']);
+    expect(BRIEF_SCHEMA.required).toEqual(FIELDS);
+    expect(Object.keys(BRIEF_SCHEMA.properties)).toEqual(FIELDS);
   });
 });
 
@@ -30,10 +46,10 @@ describe('buildBriefRequest', () => {
     expect(content).toContain('Nura: Nice! What is the goal?');
   });
 
-  it('tells the model to use only what the visitor said and never contact details', () => {
+  it('tells the model to use only what the visitor said and never invent contact details', () => {
     const system = buildBriefRequest({ model: haiku, lang: 'en', history }).system;
-    expect(system).toMatch(/only what the visitor/i);
-    expect(system).toMatch(/contact details/i);
+    expect(system).toMatch(/only what the visitor said/i);
+    expect(system).toMatch(/never guess or invent/i);
   });
 
   it('writes the brief in the visitor language', () => {
@@ -48,28 +64,65 @@ describe('buildBriefRequest', () => {
 });
 
 describe('parseBrief', () => {
-  it('returns trimmed fields from valid JSON', () => {
-    expect(parseBrief(reply('{"topic":"  KOL launch  ","description":" We are Drypers. "}'))).toEqual({
-      topic: 'KOL launch',
-      description: 'We are Drypers.',
+  const chat = [
+    user("Hi, I'm Mei Lin from Drypers. My email is mei@drypers.com and my number is 012-345 6789."),
+    user('We want to reach first-time mums in March.'),
+  ];
+
+  it('keeps what the visitor actually said', () => {
+    const brief = parseBrief(
+      replyWith({
+        type: 'advertising',
+        company: 'Drypers',
+        audience: 'first-time mums',
+        period: 'March',
+        budget: 'RM10,000 to RM30,000',
+        name: 'Mei Lin',
+        email: 'mei@drypers.com',
+        phone: '012-345 6789',
+      }),
+      chat,
+    );
+    expect(brief).toMatchObject({
+      type: 'advertising',
+      company: 'Drypers',
+      budget: 'RM10,000 to RM30,000',
+      name: 'Mei Lin',
+      email: 'mei@drypers.com',
+      phone: '012-345 6789',
     });
   });
 
-  it('keeps the topic on one line and within 160 characters', () => {
-    const brief = parseBrief(reply(JSON.stringify({ topic: `Line one\nBcc: x@y.z ${'a'.repeat(300)}`, description: 'd' })));
-    expect(brief.topic).not.toMatch(/[\r\n]/);
-    expect(brief.topic.length).toBeLessThanOrEqual(160);
+  it('drops a name, brand, email or number the visitor never typed', () => {
+    const brief = parseBrief(
+      replyWith({ company: 'Pampers', name: 'Siti Aminah', email: 'siti@pampers.com', phone: '019 876 5432' }),
+      chat,
+    );
+    expect(brief).toMatchObject({ company: '', name: '', email: '', phone: '' });
   });
 
-  it('caps the description', () => {
-    expect(parseBrief(reply(JSON.stringify({ topic: 't', description: 'x'.repeat(5000) }))).description).toHaveLength(1500);
+  it('never takes contact details from Nura or when there is no chat to check against', () => {
+    const fromNura = [model('You can email sales@nurengroup.com'), user('ok')];
+    expect(parseBrief(replyWith({ email: 'sales@nurengroup.com' }), fromNura).email).toBe('');
+    expect(parseBrief(replyWith({ email: 'mei@drypers.com' })).email).toBe('');
+  });
+
+  it('ignores an enquiry type or budget outside the offered lists', () => {
+    const brief = parseBrief(replyWith({ type: 'hack', budget: 'RM1 billion' }), chat);
+    expect(brief).toMatchObject({ type: '', budget: '' });
+  });
+
+  it('keeps single-line fields on one line and caps the message', () => {
+    const brief = parseBrief(replyWith({ audience: 'mums\nBcc: x@y.z', message: 'x'.repeat(5000) }), chat);
+    expect(brief.audience).not.toMatch(/[\r\n]/);
+    expect(brief.message).toHaveLength(1500);
   });
 
   it('returns null for unusable output', () => {
-    expect(parseBrief(reply('not json'))).toBeNull();
-    expect(parseBrief(reply('{"topic":1,"description":"x"}'))).toBeNull();
-    expect(parseBrief(reply('{"topic":"","description":"  "}'))).toBeNull();
-    expect(parseBrief(reply('{"topic":"t","description":"d"}', 'refusal'))).toBeNull();
-    expect(parseBrief(reply('{"topic":"t","descr', 'max_tokens'))).toBeNull();
+    expect(parseBrief(reply('not json'), chat)).toBeNull();
+    expect(parseBrief(reply('{"message":1}'), chat)).toBeNull();
+    expect(parseBrief(replyWith({ message: '  ' }), chat)).toBeNull();
+    expect(parseBrief(replyWith({}), chat) && parseBrief(reply('{"message":"d"}', 'refusal'), chat)).toBeNull();
+    expect(parseBrief(reply('{"message":"d', 'max_tokens'), chat)).toBeNull();
   });
 });

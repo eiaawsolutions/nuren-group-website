@@ -1,11 +1,13 @@
 import { useState, useRef, useEffect } from 'react';
-import type { FormEvent, KeyboardEvent, ReactNode } from 'react';
+import type { FormEvent, KeyboardEvent } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { MessageCircle, X, Send, Sparkles, CheckCircle2, Loader2, ArrowLeft, RotateCcw } from 'lucide-react';
 import { RichText } from './RichText';
 import { readSse } from './sse';
 import { loadChat, saveChat, clearChat, sessionChatStore } from './chatStorage';
 import { buildTranscript, hasVisitorTurns } from './transcript';
+import { EnquiryForm } from '../Enquiry/EnquiryForm';
+import { useEnquiryForm } from '../Enquiry/enquiryClient';
 import { splitIntoBubbles, typingDelayMs } from './pacing';
 import { isLang, toOptions } from './types';
 import type { ChatMessage, Lang, Role } from './types';
@@ -41,25 +43,6 @@ const CONNECTION_ERROR: Record<Lang, string> = {
 
 const CHAT_ENDPOINT = '/api/chat';
 const BRIEF_ENDPOINT = '/api/chat/brief';
-const ENQUIRY_ENDPOINT = '/api/enquiry';
-
-interface FormState {
-  name: string;
-  email: string;
-  phone: string;
-  topic: string;
-  description: string;
-  website: string; // honeypot
-}
-
-const EMPTY_FORM: FormState = {
-  name: '',
-  email: '',
-  phone: '',
-  topic: '',
-  description: '',
-  website: '',
-};
 
 /** The turns Nura should see: no greeting or error notices. */
 const toHistory = (messages: ChatMessage[]) => {
@@ -113,12 +96,8 @@ export const Chatbot = () => {
   // The in-flight reply, so "start a new chat" can stop it.
   const inflight = useRef<AbortController | null>(null);
 
-  const [form, setForm] = useState<FormState>(EMPTY_FORM);
-  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
-  const [submitting, setSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState<string | null>(null);
+  const form = useEnquiryForm();
   const [draft, setDraft] = useState<{ status: DraftStatus; turns: number }>({ status: 'idle', turns: 0 });
-  const [includeChat, setIncludeChat] = useState(true);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -240,14 +219,14 @@ export const Chatbot = () => {
     setMessages([INTRO_MESSAGE]);
     clearChat(sessionChatStore());
     // Same visitor, new conversation: keep their contact details, drop the draft.
-    setForm((f) => ({ ...f, topic: '', description: '' }));
+    form.clearCampaign();
     setDraft({ status: 'idle', turns: 0 });
-    setIncludeChat(true);
     inputRef.current?.focus();
   };
 
-  // Drafts the topic and description from the chat so the visitor doesn't
-  // retype what they already told Nura. Only fills fields that are still empty.
+  // Fills in the form from the chat (brand, audience, period, budget, and any
+  // contact details the visitor gave) so they don't retype what they already
+  // told Nura. Only fills fields that are still empty.
   const draftFromChat = async () => {
     setDraft({ status: 'loading', turns: visitorTurns });
     try {
@@ -257,12 +236,18 @@ export const Chatbot = () => {
         body: JSON.stringify({ history: buildTranscript(messages) }),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok || typeof data.topic !== 'string' || typeof data.description !== 'string') throw new Error('no draft');
-      setForm((f) => ({
-        ...f,
-        topic: f.topic.trim() ? f.topic : data.topic,
-        description: f.description.trim() ? f.description : data.description,
-      }));
+      if (!res.ok || typeof data.message !== 'string') throw new Error('no draft');
+      form.applyDraft({
+        type: data.type,
+        message: data.message,
+        company: data.company,
+        audience: data.audience,
+        period: data.period,
+        budget: data.budget,
+        name: data.name,
+        email: data.email,
+        phone: data.phone,
+      });
       setDraft({ status: 'ready', turns: visitorTurns });
     } catch {
       setDraft({ status: 'failed', turns: visitorTurns });
@@ -270,52 +255,9 @@ export const Chatbot = () => {
   };
 
   const openEnquiry = () => {
-    setSubmitError(null);
-    setFormErrors({});
     setView('form');
-    const nothingTyped = !form.topic.trim() && !form.description.trim();
+    const nothingTyped = !form.values.message.trim() && !form.values.type;
     if (visitorTurns > 0 && visitorTurns !== draft.turns && nothingTyped) void draftFromChat();
-  };
-
-  const validateForm = (): boolean => {
-    const errs: Record<string, string> = {};
-    if (!form.name.trim()) errs.name = 'Please enter your name.';
-    if (!form.email.trim()) errs.email = 'Please enter your email.';
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) errs.email = 'Please enter a valid email.';
-    if (!form.phone.trim()) errs.phone = 'Please enter your phone number.';
-    if (!form.topic.trim()) errs.topic = 'Please enter a topic.';
-    if (!form.description.trim()) errs.description = 'Please describe your enquiry.';
-    setFormErrors(errs);
-    return Object.keys(errs).length === 0;
-  };
-
-  const submitEnquiry = async (e: FormEvent) => {
-    e.preventDefault();
-    if (submitting) return;
-    setSubmitError(null);
-    if (!validateForm()) return;
-
-    setSubmitting(true);
-    try {
-      const transcript = includeChat ? buildTranscript(messages) : [];
-      const res = await fetch(ENQUIRY_ENDPOINT, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, ...(transcript.length ? { transcript } : {}) }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        if (data.errors) setFormErrors(data.errors);
-        throw new Error(data.error || 'Could not submit your enquiry.');
-      }
-      setView('success');
-      setForm(EMPTY_FORM);
-      setDraft({ status: 'idle', turns: visitorTurns });
-    } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : 'Something went wrong.');
-    } finally {
-      setSubmitting(false);
-    }
   };
 
   // Closing only hides the panel; the conversation stays for when they come back.
@@ -507,132 +449,33 @@ export const Chatbot = () => {
             )}
 
             {view === 'form' && (
-              <form
-                onSubmit={submitEnquiry}
-                className="flex-1 overflow-y-auto px-5 py-5 space-y-3.5 bg-slate-50"
-              >
-                <p className="text-sm text-slate-600">
-                  Share a few details and our team will get back to you.
-                </p>
-                {draft.status === 'loading' && (
-                  <p className="flex items-center gap-2 text-xs text-slate-500" role="status">
-                    <Loader2 size={14} className="animate-spin flex-shrink-0" />
-                    Filling in the details from our chat…
-                  </p>
-                )}
-                {draft.status === 'ready' && (
-                  <p className="text-xs text-slate-500" role="status">
-                    We've filled in the topic and description from your chat. Edit anything before you send.
-                  </p>
-                )}
-
-                <Field label="Name" error={formErrors.name}>
-                  <input
-                    type="text"
-                    value={form.name}
-                    onChange={(e) => setForm({ ...form, name: e.target.value })}
-                    className={inputCls(!!formErrors.name)}
-                    autoComplete="name"
-                    disabled={submitting}
-                  />
-                </Field>
-
-                <Field label="Email" error={formErrors.email}>
-                  <input
-                    type="email"
-                    value={form.email}
-                    onChange={(e) => setForm({ ...form, email: e.target.value })}
-                    className={inputCls(!!formErrors.email)}
-                    autoComplete="email"
-                    disabled={submitting}
-                  />
-                </Field>
-
-                <Field label="Phone" error={formErrors.phone}>
-                  <input
-                    type="tel"
-                    value={form.phone}
-                    onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                    className={inputCls(!!formErrors.phone)}
-                    autoComplete="tel"
-                    placeholder="+60 …"
-                    disabled={submitting}
-                  />
-                </Field>
-
-                <Field label="Enquiry topic" error={formErrors.topic}>
-                  <input
-                    type="text"
-                    value={form.topic}
-                    onChange={(e) => setForm({ ...form, topic: e.target.value })}
-                    className={inputCls(!!formErrors.topic)}
-                    placeholder="e.g. Brand partnership, Investor relations"
-                    disabled={submitting}
-                  />
-                </Field>
-
-                <Field label="Description" error={formErrors.description}>
-                  <textarea
-                    value={form.description}
-                    onChange={(e) => setForm({ ...form, description: e.target.value })}
-                    rows={draft.status === 'ready' ? 6 : 4}
-                    className={inputCls(!!formErrors.description) + ' resize-none'}
-                    placeholder="Tell us a little about what you're looking for."
-                    disabled={submitting}
-                  />
-                </Field>
-
-                {hasVisitorTurns(messages) && (
-                  <label className="flex items-start gap-2.5 text-xs text-slate-600 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={includeChat}
-                      onChange={(e) => setIncludeChat(e.target.checked)}
-                      className="mt-0.5 h-4 w-4 flex-shrink-0 accent-nuren-pink"
-                      disabled={submitting}
-                    />
-                    <span>Include my chat with Nura so the team has the full picture.</span>
-                  </label>
-                )}
-
-                {/* Honeypot */}
-                <div className="hidden" aria-hidden="true">
-                  <label>
-                    Website
-                    <input
-                      type="text"
-                      tabIndex={-1}
-                      autoComplete="off"
-                      value={form.website}
-                      onChange={(e) => setForm({ ...form, website: e.target.value })}
-                    />
-                  </label>
-                </div>
-
-                {submitError && (
-                  <div className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">
-                    {submitError}
-                  </div>
-                )}
-
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="w-full py-3 rounded-full bg-gradient-to-r from-nuren-pink to-nuren-purple text-white font-semibold flex items-center justify-center gap-2 shadow-lg shadow-nuren-pink/20 hover:scale-[1.02] transition-transform disabled:opacity-60 disabled:cursor-wait disabled:hover:scale-100"
-                >
-                  {submitting ? (
+              <div className="flex-1 overflow-y-auto px-5 py-5 bg-slate-50">
+                <EnquiryForm
+                  form={form}
+                  source="chat"
+                  transcript={hasVisitorTurns(messages) ? buildTranscript(messages) : []}
+                  onSent={() => {
+                    setView('success');
+                    setDraft({ status: 'idle', turns: visitorTurns });
+                  }}
+                  notice={
                     <>
-                      <Loader2 size={18} className="animate-spin" />
-                      Sending…
+                      <p className="text-sm text-slate-600">Share a few details and our team will get back to you.</p>
+                      {draft.status === 'loading' && (
+                        <p className="flex items-center gap-2 text-xs text-slate-500" role="status">
+                          <Loader2 size={14} className="animate-spin flex-shrink-0" />
+                          Filling in the details from our chat…
+                        </p>
+                      )}
+                      {draft.status === 'ready' && (
+                        <p className="text-xs text-slate-500" role="status">
+                          We've filled in what you told Nura. Check it and edit anything before you send.
+                        </p>
+                      )}
                     </>
-                  ) : (
-                    'Submit enquiry'
-                  )}
-                </button>
-                <p className="text-[11px] text-slate-400 text-center">
-                  Your enquiry is sent to the Nuren Group team.
-                </p>
-              </form>
+                  }
+                />
+              </div>
             )}
 
             {view === 'success' && (
@@ -673,28 +516,5 @@ export const Chatbot = () => {
     </>
   );
 };
-
-const Field = ({
-  label,
-  error,
-  children,
-}: {
-  label: string;
-  error?: string;
-  children: ReactNode;
-}) => (
-  <label className="block">
-    <span className="text-xs font-semibold text-slate-700 block mb-1">{label}</span>
-    {children}
-    {error && <span className="text-xs text-rose-600 block mt-1">{error}</span>}
-  </label>
-);
-
-const inputCls = (hasError: boolean) =>
-  `w-full px-3.5 py-2.5 rounded-xl border text-sm bg-white focus:outline-none focus:ring-2 transition-colors ${
-    hasError
-      ? 'border-rose-400 focus:border-rose-500 focus:ring-rose-200'
-      : 'border-slate-300 focus:border-nuren-pink focus:ring-nuren-pink/20'
-  } disabled:bg-slate-100 disabled:cursor-not-allowed`;
 
 export default Chatbot;
