@@ -1,4 +1,5 @@
 import express from 'express';
+import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
@@ -21,6 +22,9 @@ import { validateEnquiry } from './server/leads/enquiry.js';
 import { sanitizeAttachment, MAX_ENQUIRY_BODY } from './server/leads/attachment.js';
 import { createLeadStore } from './server/leads/store.js';
 import { renderLeadEmail, leadsToCsv } from './server/leads/format.js';
+import { createInvestorStore } from './server/investors/store.js';
+import { registerInvestorRoutes, setInvestorStaticHeaders } from './server/investors/routes.js';
+import { legacyRedirect } from './server/investors/redirects.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT) || 3000;
@@ -33,6 +37,10 @@ const ENQUIRY_CC = (process.env.ENQUIRY_CC || '').split(',').map((e) => e.trim()
 // Leads and attached briefs are written here. Point it at a Railway volume to
 // keep them across deploys; otherwise they last until the next redeploy.
 const LEADS_DIR = process.env.LEADS_DIR || path.join(__dirname, 'data');
+// Investor announcements, financial reports and admin-uploaded PDFs. Same rule
+// as leads: point it at the Railway volume or admin edits vanish on redeploy.
+const INVESTOR_DATA_DIR = process.env.INVESTOR_DATA_DIR || path.join(__dirname, 'data', 'investors');
+const INVESTOR_SEED_DIR = path.join(__dirname, 'src', 'data', 'investors');
 
 // Nura's prompt, model registry, request building, language handling and
 // usage tracking live in server/nura/. NURA_MODEL picks the model by key
@@ -56,7 +64,9 @@ const CHAT_RATE_MAX = 20;
 const ENQUIRY_RATE_WINDOW_MS = 60 * 60 * 1000;
 const ENQUIRY_RATE_MAX = 5;
 const ADMIN_RATE_WINDOW_MS = 60_000;
-const ADMIN_RATE_MAX = 10;
+// Editing announcements takes several calls per save (list, upload, save,
+// reload). Logins are still capped by the failure lockout below.
+const ADMIN_RATE_MAX = 60;
 
 const RING_BUFFER_SIZE = 50;
 const RATE_LIMIT_MAX_KEYS = 10_000;
@@ -83,6 +93,15 @@ function logError(scope, detail) {
 
 const leadStore = createLeadStore({ dir: LEADS_DIR, onError: logError });
 
+const readSeed = (file) => JSON.parse(fs.readFileSync(path.join(INVESTOR_SEED_DIR, file), 'utf8'));
+const investorStore = createInvestorStore({
+  dir: INVESTOR_DATA_DIR,
+  seeds: {
+    announcements: readSeed('announcements.seed.json'),
+    'financial-reports': readSeed('financial-reports.seed.json'),
+  },
+  onError: logError,
+});
 
 function isEmail(value) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
@@ -173,6 +192,8 @@ app.use(helmet({
         'https://www.youtube.com',
         'https://www.youtube-nocookie.com',
         'https://www.instagram.com',
+        // The prospectus preview page embeds the prospectus from Google Drive.
+        'https://drive.google.com',
       ],
       frameAncestors: ["'none'"],
       baseUri: ["'self'"],
@@ -193,6 +214,16 @@ const PERMISSIONS_POLICY = [
 app.use((_req, res, next) => {
   res.set('Permissions-Policy', PERMISSIONS_POLICY);
   next();
+});
+
+// Old investor URLs (this site's former hub and governance pages, and the
+// investor site's renamed routes) answer with a 301 before anything else.
+app.use((req, res, next) => {
+  if (req.method !== 'GET' && req.method !== 'HEAD') return next();
+  const target = legacyRedirect(req.path);
+  if (!target) return next();
+  const query = req.originalUrl.indexOf('?');
+  return res.redirect(301, query === -1 ? target : target + req.originalUrl.slice(query));
 });
 
 // Admin responses carry visitors' contact details (a PDPA data store): never
@@ -452,6 +483,11 @@ app.get('/admin/api/status', adminAuth, (req, res) => {
         writable: leadStore.writable,
         dir: LEADS_DIR,
       },
+      investorStorage: {
+        persistent: investorStore.writable && Boolean(process.env.INVESTOR_DATA_DIR),
+        writable: investorStore.writable,
+        dir: INVESTOR_DATA_DIR,
+      },
       chatModel: `${NURA_MODEL.label} (${NURA_MODEL.id})`,
       chatModelKey: NURA_MODEL.key,
       chatEffort: NURA_MODEL.effort,
@@ -539,9 +575,13 @@ app.post('/admin/api/test-enquiry', adminAuth, async (_req, res) => {
   return res.json({ ok: true, delivery: result.delivery });
 });
 
-// `index: 'index.html'` so a request for `/investors` resolves to the
-// prerendered `dist/investors/index.html` automatically (build creates one
-// per route — see scripts/prerender.mjs). Hashed asset bundles get a long
+// Investor announcements and financial reports: public lists, uploaded files,
+// and the admin's add / edit / hide / delete / upload (server/investors/).
+registerInvestorRoutes(app, { store: investorStore, adminAuth, onError: logError });
+
+// `index: 'index.html'` so a request for `/investors/company` resolves to the
+// prerendered `dist/investors/company/index.html` automatically (build creates
+// one per route — see scripts/prerender.mjs). Hashed asset bundles get a long
 // cache; HTML stays at maxAge:0 so deploys propagate immediately.
 app.use(express.static(DIST_DIR, {
   index: 'index.html',
@@ -554,12 +594,13 @@ app.use(express.static(DIST_DIR, {
     } else if (/\/assets\/.+\.(js|css|woff2?)$/.test(norm)) {
       res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
     }
+    setInvestorStaticHeaders(res, norm);
   },
 }));
 
-// SPA fallback for unknown routes (dynamic params like
-// /investors/governance-documents/:docId — those have no per-route prerender
-// and fall back to the root client-rendered shell). Tag /admin and /api with
+// SPA fallback for unknown routes (dynamic params like /pdf-viewer?src= or
+// an unknown governance slug — those fall back to the root client-rendered
+// shell). Tag /admin and /api with
 // X-Robots-Tag noindex so search engines don't index admin shell or API URLs
 // even before the React app mounts.
 app.use((req, res) => {
