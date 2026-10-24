@@ -77,5 +77,8 @@ export const FOOTER_SOCIALS = [
 
 export const FOOTER_PHONE = { label: '+603 7625 5605', href: 'tel:+60376255605' };
 
-/** The investor section and its PDF viewer carry the investor site's footer; the rest of the site keeps its own. */
-export const usesInvestorFooter = (pathname: string) => /^\/(investors|pdf-viewer)(\/|$)/i.test(pathname);
+/**
+ * The pages ported from the investor site (the investor section, its PDF
+ * viewer, careers) carry its footer; the rest of the site keeps its own.
+ */
+export const usesInvestorSiteFooter = (pathname: string) => /^\/(investors|pdf-viewer|careers)(\/|$)/i.test(pathname);

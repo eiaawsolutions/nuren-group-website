@@ -1,0 +1,285 @@
+/* The careers page, ported from the Nuren investor site's
+   (main-pages)/careers/style.scss. Values are kept as they were there (sizes
+   in vh / vmin included); everything is scoped under .cr-root. Jost is the
+   investor site's font; line-height is the browser default there. */
+
+.cr-root,
+.cr-root * {
+  font-family: "Jost Variable", "Jost", sans-serif;
+}
+
+.cr-root {
+  line-height: normal;
+  color: black;
+}
+
+.cr-root h1,
+.cr-root h2,
+.cr-root h3,
+.cr-root p {
+  margin: 0;
+}
+
+/* ---- Banner ---- */
+
+.cr-banner {
+  display: flex;
+  justify-content: center;
+  background: url("/careers/vision_mission_bg.jpg");
+  padding: 12vh 5vh;
+  overflow: hidden;
+}
+
+.cr-banner-text {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  width: 90%;
+  max-width: 1200px;
+  font-size: clamp(15px, 2.5vmin, 30px);
+  color: white;
+}
+
+.cr-banner h1 span {
+  display: block;
+  white-space: nowrap;
+  font-size: 7vmin;
+  font-weight: 700;
+  line-height: 110%;
+  color: white;
+}
+
+.cr-banner h1 .cr-pink {
+  color: #f25075;
+}
+
+.cr-banner p {
+  max-width: 800px;
+  color: white;
+}
+
+.cr-banner img {
+  position: absolute;
+  z-index: 1;
+  right: 0;
+  bottom: 0;
+  width: 70%;
+  max-width: none;
+  height: auto;
+  transform: translate(50%, 50%);
+}
+
+/* ---- Meet our team ---- */
+
+.cr-team {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 5vh;
+  padding: 10vh 3vh;
+  background-color: white;
+}
+
+.cr-team img {
+  width: 100%;
+  max-width: 600px;
+  height: auto;
+  border-radius: 0 80px 0 80px;
+}
+
+.cr-team-text {
+  display: flex;
+  flex-direction: column;
+  max-width: 600px;
+  font-size: clamp(15px, 3vmin, 25px);
+  color: black;
+}
+
+.cr-team h2 {
+  color: #44394d;
+  font-size: 5vmin;
+  font-weight: 700;
+  line-height: 110%;
+  margin-bottom: 2vmin;
+}
+
+/* ---- Photo strip ---- */
+
+.cr-carousel {
+  display: flex;
+  width: 100%;
+  overflow: hidden;
+}
+
+.cr-carousel img {
+  width: 20%;
+  min-width: 200px;
+  max-width: none;
+  height: auto;
+}
+
+/* ---- Open positions ---- */
+
+.cr-positions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8vh 3vh;
+  background-color: #f3f3f3;
+}
+
+.cr-positions h2 {
+  color: #44394d;
+  font-size: 6vmin;
+  font-weight: 700;
+  line-height: 110%;
+  margin-bottom: 2vmin;
+}
+
+.cr-position-list {
+  display: flex;
+  flex-direction: column;
+  width: 95%;
+  max-width: 800px;
+  gap: 10px;
+}
+
+.cr-pos {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background-color: white;
+  padding: 20px 150px 20px 25px;
+  border-radius: 5px;
+  color: black;
+}
+
+.cr-job-title {
+  color: #44394d;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.cr-tags {
+  display: flex;
+  flex-wrap: wrap;
+  width: 100%;
+  gap: 5px;
+}
+
+.cr-tag {
+  color: #b17951;
+  background-color: #f6dec5;
+  padding: 5px 10px;
+}
+
+.cr-description {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  margin: 10px 0 20px;
+  color: #818a9c;
+}
+
+.cr-desc-content {
+  overflow: hidden;
+}
+
+/* Browser list defaults, which the site's Tailwind reset removes. */
+.cr-desc-content ul,
+.cr-desc-content ol {
+  margin: 1em 0;
+  padding-left: 40px;
+}
+
+.cr-desc-content ul {
+  list-style: disc;
+}
+
+.cr-desc-content ol {
+  list-style: decimal;
+}
+
+.cr-desc-content ul ul {
+  list-style: circle;
+  margin: 0;
+}
+
+.cr-desc-content li {
+  display: list-item;
+}
+
+.cr-desc-content strong,
+.cr-desc-content b {
+  font-weight: 700;
+}
+
+.cr-desc-content a {
+  color: #f25075;
+  text-decoration: underline;
+}
+
+.cr-see-more {
+  align-self: flex-end;
+  padding: 0 5px;
+  border: 0;
+  background-color: white;
+  color: #f25075;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.cr-see-more:hover {
+  text-decoration: underline;
+}
+
+.cr-bottom-info {
+  display: flex;
+  flex-wrap: wrap;
+  margin-left: -5px;
+}
+
+.cr-info {
+  display: flex;
+  align-items: center;
+  margin-right: 20px;
+  color: #818a9c;
+  font-size: 15px;
+}
+
+.cr-info svg {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.cr-apply {
+  position: absolute;
+  top: 50px;
+  right: 30px;
+  min-width: 100px;
+  padding: 8px 10px;
+  border-radius: 99px;
+  background-color: #f25075;
+  color: white;
+  text-align: center;
+  cursor: pointer;
+}
+
+.cr-see-more:focus-visible,
+.cr-apply:focus-visible {
+  outline: 2px solid #44394d;
+  outline-offset: 2px;
+}
+
+@media (max-width: 600px) {
+  .cr-pos {
+    padding-right: 20px;
+    padding-bottom: 70px;
+  }
+  .cr-apply {
+    top: auto;
+    bottom: 20px;
+  }
+}

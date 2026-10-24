@@ -2,9 +2,10 @@ import { useState, useEffect, FormEvent } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { LeadsPanel, type Lead } from './LeadsPanel';
 import { InvestorRecordsPanel } from './InvestorRecordsPanel';
+import { JobPositionsPanel } from './JobPositionsPanel';
 
-type Tab = 'overview' | 'kb' | 'leads' | 'announcements' | 'reports' | 'errors';
-const TABS: Tab[] = ['overview', 'kb', 'leads', 'announcements', 'reports', 'errors'];
+type Tab = 'overview' | 'kb' | 'leads' | 'announcements' | 'reports' | 'careers' | 'errors';
+const TABS: Tab[] = ['overview', 'kb', 'leads', 'announcements', 'reports', 'careers', 'errors'];
 
 interface Status {
   settings: {
@@ -230,6 +231,7 @@ export function AdminPage() {
               {t === 'leads' && `Leads (${leads.length})`}
               {t === 'announcements' && 'Announcements'}
               {t === 'reports' && 'Finance Reports'}
+              {t === 'careers' && 'Careers'}
               {t === 'errors' && `Errors (${errors.length})`}
             </button>
           ))}
@@ -361,6 +363,8 @@ export function AdminPage() {
         {tab === 'reports' && (
           <InvestorRecordsPanel collection="financial-reports" storage={status.settings.investorStorage} authHeader={authHeader(password)} />
         )}
+
+        {tab === 'careers' && <JobPositionsPanel storage={status.settings.investorStorage} authHeader={authHeader(password)} />}
 
         {tab === 'errors' && (
           <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">

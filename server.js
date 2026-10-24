@@ -26,6 +26,8 @@ import { createInvestorStore } from './server/investors/store.js';
 import { registerInvestorRoutes } from './server/investors/routes.js';
 import { s3UploaderFromEnv } from './server/investors/s3.js';
 import { legacyRedirect } from './server/investors/redirects.js';
+import { createJobStore } from './server/careers/store.js';
+import { registerCareerRoutes } from './server/careers/routes.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT) || 3000;
@@ -106,6 +108,13 @@ const investorStore = createInvestorStore({
 // Admin uploads go to the investor site's S3 bucket once AWS keys are set;
 // until then they stay on the volume (INVESTOR_DATA_DIR).
 const investorUploader = s3UploaderFromEnv();
+// The careers page's job positions, also ported from the investor site's
+// admin, sit beside the investor records on the same volume.
+const jobStore = createJobStore({
+  dir: INVESTOR_DATA_DIR,
+  seed: JSON.parse(fs.readFileSync(path.join(__dirname, 'src', 'data', 'careers', 'job-positions.seed.json'), 'utf8')),
+  onError: logError,
+});
 
 function isEmail(value) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
@@ -586,6 +595,9 @@ app.post('/admin/api/test-enquiry', adminAuth, async (_req, res) => {
 // Investor announcements and financial reports: public lists, uploaded files,
 // and the admin's add / edit / hide / delete / upload (server/investors/).
 registerInvestorRoutes(app, { store: investorStore, adminAuth, uploader: investorUploader, onError: logError });
+
+// Careers: the open positions for /careers and the admin's Careers tab (server/careers/).
+registerCareerRoutes(app, { store: jobStore, adminAuth });
 
 // `index: 'index.html'` so a request for `/investors/company` resolves to the
 // prerendered `dist/investors/company/index.html` automatically (build creates

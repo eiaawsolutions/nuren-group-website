@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, it, expect } from 'vitest';
-import { FOOTER_MENU, FOOTER_SOCIALS, QUICKLINKS, usesInvestorFooter } from './footerLinks';
+import { FOOTER_MENU, FOOTER_SOCIALS, QUICKLINKS, usesInvestorSiteFooter } from './footerLinks';
 
 const sitemap = readFileSync(new URL('../../../public/sitemap.xml', import.meta.url), 'utf8');
 const all = [...QUICKLINKS, ...FOOTER_MENU];
@@ -38,16 +38,16 @@ describe('investor footer links', () => {
   });
 });
 
-describe('usesInvestorFooter', () => {
-  it('is on for the investor section and its PDF viewer', () => {
-    for (const p of ['/investors/company', '/investors/announcements/agm', '/investors/reports', '/investors/prospectus', '/pdf-viewer', '/investors']) {
-      expect(usesInvestorFooter(p), p).toBe(true);
+describe('usesInvestorSiteFooter', () => {
+  it('is on for the pages ported from the investor site: investors, its PDF viewer, careers', () => {
+    for (const p of ['/investors/company', '/investors/announcements/agm', '/investors/reports', '/investors/prospectus', '/pdf-viewer', '/investors', '/careers', '/careers/']) {
+      expect(usesInvestorSiteFooter(p), p).toBe(true);
     }
   });
 
   it('is off for the rest of the site', () => {
-    for (const p of ['/home', '/products', '/media-hub', '/careers', '/board-of-directors', '/investorsx', '/pdf-viewerx']) {
-      expect(usesInvestorFooter(p), p).toBe(false);
+    for (const p of ['/home', '/products', '/media-hub', '/board-of-directors', '/investorsx', '/pdf-viewerx', '/careersx']) {
+      expect(usesInvestorSiteFooter(p), p).toBe(false);
     }
   });
 });

@@ -3,7 +3,10 @@ import { motion, AnimatePresence } from 'motion/react';
 import { BrowserRouter, Routes, Route, Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import { legacyRedirect } from '../server/investors/redirects.js';
-import { usesInvestorFooter } from './data/investors/footerLinks';
+import { usesInvestorSiteFooter } from './data/investors/footerLinks';
+import { CareersPage } from './components/Careers/CareersPage';
+import { applicationDraft, jobFromSearch } from './components/Careers/apply';
+import type { EnquiryValues } from './components/Enquiry/enquiryClient';
 import {
   InvestorFooter,
   CompanyInformationPage,
@@ -1557,174 +1560,6 @@ const BoardOfDirectorsPage = () => {
   );
 };
 
-// --- Careers Page ---
-
-const CareersPage = () => {
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, []);
-
-  const benefits = [
-    {
-      title: "Growth & Learning",
-      desc: "We invest in our people. From workshops to hands-on experience in a fast-growing tech company.",
-      icon: <Zap className="text-nuren-pink" size={24} />,
-    },
-    {
-      title: "Inclusive Culture",
-      desc: "A diverse team where every voice matters. We celebrate different perspectives and ideas.",
-      icon: <Users className="text-blue-500" size={24} />,
-    },
-    {
-      title: "Impactful Work",
-      desc: "Help us build the future of parenting and commerce in Southeast Asia. Your work touches millions.",
-      icon: <Heart className="text-red-500" size={24} />,
-    },
-    {
-      title: "Flexible Environment",
-      desc: "We focus on results. Enjoy a dynamic work environment that values work-life balance.",
-      icon: <Globe className="text-emerald-500" size={24} />,
-    }
-  ];
-
-  const departments = [
-    { name: "Tech & Engineering", roles: ["Frontend Developer", "Backend Developer", "Mobile App Developer"] },
-    { name: "Marketing & Growth", roles: ["Performance Marketing", "SEO Specialist", "Social Media Manager"] },
-    { name: "Content & Creative", roles: ["Content Writer", "Video Editor", "Graphic Designer"] },
-    { name: "Sales & Partnerships", roles: ["Account Manager", "Business Development", "Sales Executive"] },
-    { name: "Operations & HR", roles: ["HR Generalist", "Operations Executive", "Admin Support"] },
-    { name: "Data & Analytics", roles: ["Data Analyst", "Business Intelligence", "Data Scientist"] }
-  ];
-
-  return (
-    <div className="pt-20">
-      <SEO
-        title="Careers | Nuren Group - Join Our Mission"
-        description="Join Nuren Group and help us build Southeast Asia's leading community-powered commerce platform for women and families."
-        keywords="Nuren Group careers, jobs in Malaysia, tech jobs SEA, join Nuren Group"
-        canonical="https://nurengroup.com/careers"
-        breadcrumbs={[
-          { name: 'Home', url: '/home' },
-          { name: 'Careers', url: '/careers' },
-        ]}
-      />
-
-      {/* Hero Section */}
-      <section className="py-24 bg-slate-50">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="max-w-3xl">
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="inline-block px-4 py-2 bg-nuren-pink/10 text-nuren-pink rounded-full text-sm font-bold mb-6"
-            >
-              Join the Team
-            </motion.div>
-            <motion.h1 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-              className="text-5xl md:text-7xl font-bold text-slate-900 mb-8 leading-tight"
-            >
-              Build the Future of <span className="text-nuren-pink">Parenting</span>
-            </motion.h1>
-            <motion.p 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="text-xl text-slate-600 mb-10 leading-relaxed"
-            >
-              We are looking for passionate, innovative, and driven individuals to help us empower women and families across Southeast Asia.
-            </motion.p>
-          </div>
-        </div>
-      </section>
-
-      {/* Why Join Us */}
-      <section className="py-24">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-slate-900 mb-4">Why Join Nuren Group?</h2>
-            <p className="text-slate-600 max-w-2xl mx-auto text-lg">
-              We offer more than just a job. We offer a chance to make a real difference in the lives of millions.
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {benefits.map((benefit, idx) => (
-              <motion.div 
-                key={idx}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: idx * 0.1 }}
-                className="p-8 rounded-3xl border border-slate-100 bg-white hover:shadow-xl transition-all"
-              >
-                <div className="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center mb-6">
-                  {benefit.icon}
-                </div>
-                <h3 className="text-xl font-bold text-slate-900 mb-4">{benefit.title}</h3>
-                <p className="text-slate-600 leading-relaxed">
-                  {benefit.desc}
-                </p>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Open Positions */}
-      <section className="py-24 bg-slate-900 text-white rounded-[64px] mx-6 mb-24">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold mb-4">Open Positions</h2>
-            <p className="text-slate-400 max-w-2xl mx-auto text-lg">
-              Explore our current opportunities and find where you fit in.
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {departments.map((dept, idx) => (
-              <motion.div 
-                key={idx}
-                initial={{ opacity: 0, scale: 0.95 }}
-                whileInView={{ opacity: 1, scale: 1 }}
-                viewport={{ once: true }}
-                transition={{ delay: idx * 0.05 }}
-                className="p-8 rounded-3xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all group"
-              >
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-xl font-bold">{dept.name}</h3>
-                  <ChevronRight className="text-nuren-pink group-hover:translate-x-1 transition-transform" />
-                </div>
-                <div className="space-y-2">
-                  {dept.roles.map((role, rIdx) => (
-                    <div key={rIdx} className="text-slate-400 text-sm flex items-center gap-2">
-                      <div className="w-1 h-1 bg-nuren-pink rounded-full" />
-                      {role}
-                    </div>
-                  ))}
-                </div>
-              </motion.div>
-            ))}
-          </div>
-
-          <div className="mt-16 text-center">
-            <p className="text-slate-400 mb-8">Don't see a role that fits? We're always looking for talent. Send your CV to us!</p>
-            <a 
-              href="mailto:admin@nurengroup.com" 
-              className="inline-flex items-center gap-2 bg-nuren-pink text-white px-10 py-4 rounded-full font-bold text-lg hover:bg-nuren-pink/90 transition-all shadow-lg shadow-nuren-pink/20"
-            >
-              Email CV to admin@nurengroup.com
-              <ArrowRight size={20} />
-            </a>
-          </div>
-        </div>
-      </section>
-    </div>
-  );
-};
-
 // --- Ecosystem Page ---
 
 const EcosystemPage = ({ onContactClick }: { onContactClick: () => void }) => {
@@ -2071,27 +1906,38 @@ const LegacyRedirect = () => {
   return <Navigate to={target + location.search} replace />;
 };
 
+type ContactDraft = Partial<EnquiryValues> | null;
+
 // The live nurengroup.com has an /enquiry page; here enquiries go through the
-// Contact Us window, so /enquiry opens it over the home page.
-const EnquiryRedirect = ({ onContactClick }: { onContactClick: () => void }) => {
+// Contact Us window, so /enquiry opens it over the home page, and a careers
+// APPLY link (/enquiry?job=<position>) opens it as that job application over
+// the careers page.
+const EnquiryRedirect = ({ onOpen }: { onOpen: (draft?: ContactDraft) => void }) => {
   const navigate = useNavigate();
+  const { search } = useLocation();
   useEffect(() => {
-    navigate('/home', { replace: true });
-    onContactClick();
+    const job = jobFromSearch(search);
+    navigate(job ? '/careers' : '/home', { replace: true });
+    onOpen(job ? applicationDraft(job) : null);
   }, []);
   return null;
 };
 
-// The investor pages carry the investor site's footer (as on nurengroup.com).
+// The pages ported from the investor site carry its footer (as on nurengroup.com).
 const SiteFooter = ({ onContactClick }: { onContactClick: () => void }) => {
   const { pathname } = useLocation();
-  return usesInvestorFooter(pathname) ? <InvestorFooter onContactClick={onContactClick} /> : <Footer />;
+  return usesInvestorSiteFooter(pathname) ? <InvestorFooter onContactClick={onContactClick} /> : <Footer />;
 };
 
 // --- Main App ---
 
 export default function App() {
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
+  const [contactDraft, setContactDraft] = useState<ContactDraft>(null);
+  const openContact = (draft: ContactDraft = null) => {
+    setContactDraft(draft);
+    setIsContactModalOpen(true);
+  };
 
   return (
     <HelmetProvider>
@@ -2113,15 +1959,15 @@ export default function App() {
                 >
                   Skip to main content
                 </a>
-                <TopCtaBar onContactClick={() => setIsContactModalOpen(true)} />
-                <Navbar onContactClick={() => setIsContactModalOpen(true)} />
+                <TopCtaBar onContactClick={() => openContact()} />
+                <Navbar onContactClick={() => openContact()} />
 
                 <main id="main-content" className="pt-9">
                   <Routes>
-                    <Route path="/home" element={<Home onContactClick={() => setIsContactModalOpen(true)} />} />
-                    <Route path="/ecosystem" element={<EcosystemPage onContactClick={() => setIsContactModalOpen(true)} />} />
+                    <Route path="/home" element={<Home onContactClick={() => openContact()} />} />
+                    <Route path="/ecosystem" element={<EcosystemPage onContactClick={() => openContact()} />} />
                     <Route path="/products" element={<ProductsPage />} />
-                    <Route path="/media-hub" element={<MediaHubPage onContactClick={() => setIsContactModalOpen(true)} />} />
+                    <Route path="/media-hub" element={<MediaHubPage onContactClick={() => openContact()} />} />
                     {/* Investor pages, ported from the Nuren investor site (src/components/Investors). */}
                     <Route path="/investors/company" element={<CompanyInformationPage />} />
                     <Route path="/investors/corporate-governance" element={<CorporateGovernancePage />} />
@@ -2141,17 +1987,18 @@ export default function App() {
                     <Route path="/investors/governance-documents/:docId" element={<LegacyRedirect />} />
                     <Route path="/mediahub" element={<LegacyRedirect />} />
                     <Route path="/brands/our-brands" element={<LegacyRedirect />} />
-                    <Route path="/enquiry" element={<EnquiryRedirect onContactClick={() => setIsContactModalOpen(true)} />} />
+                    <Route path="/enquiry" element={<EnquiryRedirect onOpen={openContact} />} />
                     <Route path="/board-of-directors" element={<BoardOfDirectorsPage />} />
-                    <Route path="/careers" element={<CareersPage />} />
+                    <Route path="/careers" element={<CareersPage onApply={(position) => openContact(applicationDraft(position))} />} />
                   </Routes>
                 </main>
 
-                <SiteFooter onContactClick={() => setIsContactModalOpen(true)} />
+                <SiteFooter onContactClick={() => openContact()} />
 
                 <ContactModal
                   isOpen={isContactModalOpen}
                   onClose={() => setIsContactModalOpen(false)}
+                  draft={contactDraft}
                 />
 
                 <Chatbot />
