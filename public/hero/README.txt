@@ -20,6 +20,15 @@ Recommended specs:
   before the whole file has downloaded.
 - Keep important content away from the bottom ~20% — the "NUREN GROUP"
   title, subtitle and Enter button sit there.
+- The FIRST FRAME must not be black (no fade-in from black). It shows
+  until playback starts and flashes on every loop; a black one once left
+  the whole page black for visitors whose video never started. Editors
+  often export a black first frame; drop it with:
+    ffmpeg -i in.mp4 -an -vf "trim=start_frame=1,setpts=PTS-STARTPTS"
+      -c:v libx264 -crf 18 -pix_fmt yuv420p -movflags +faststart out.mp4
+- Visitors with "reduce motion" on, or whose browser refuses autoplay, see
+  one still frame instead, taken at STILL_FRAME_S (3s) in HeroLanding.tsx.
+  Change that number if the new video's best moment is elsewhere.
 
 The slide-01.jpeg ... slide-15.jpeg files are the old slideshow images.
 They are kept for reference but are no longer shown on the hero page.

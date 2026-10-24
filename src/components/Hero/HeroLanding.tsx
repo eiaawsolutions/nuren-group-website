@@ -8,8 +8,15 @@ import { SEO, SITE_URL } from '../SEO';
 // Background video served from public/hero/. The `#t=0.001` media fragment
 // nudges iOS Safari into painting the first frame even when it refuses to
 // autoplay (Low Power Mode), so the splash never sits on a blank rectangle.
+// The first frame shows until playback starts and on every loop, so it must
+// not be black (see public/hero/README.txt).
 // The old slide-XX.jpeg files remain in public/hero/ but are no longer used.
 const HERO_VIDEO_SRC = '/hero/hero_section_video.mp4#t=0.001';
+
+// Frame held when the video can't move (reduced motion, autoplay refused):
+// the bear facing camera over all three brand words. The opening frames are
+// only the empty backdrop, which reads as "the video didn't load".
+const STILL_FRAME_S = 3;
 
 // Shared by the backdrop and foreground <video>. Autoplay only works on
 // mobile when the video is muted AND inline (`playsInline` stops iOS from
@@ -55,11 +62,16 @@ export const HeroLanding = () => {
       v.setAttribute('muted', '');
     });
 
-    // Honour the OS "reduce motion" setting: hold the first frame instead of
-    // looping. Re-evaluated live if the user flips the setting.
+    // Honour the OS "reduce motion" setting: hold a still instead of looping.
+    // Re-evaluated live if the user flips the setting. A refused play() holds
+    // the same still until the retry below.
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const play = () => videos.forEach((v) => v.play().catch(() => {}));
-    const pause = () => videos.forEach((v) => v.pause());
+    const holdStill = (v: HTMLVideoElement) => {
+      v.pause();
+      v.currentTime = STILL_FRAME_S;
+    };
+    const play = () => videos.forEach((v) => v.play().catch(() => holdStill(v)));
+    const pause = () => videos.forEach(holdStill);
     const syncMotion = () => (reduceMotion.matches ? pause() : play());
     syncMotion();
 
