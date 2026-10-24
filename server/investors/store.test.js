@@ -8,19 +8,19 @@ const PDF = Buffer.concat([Buffer.from('%PDF-1.7\n'), Buffer.alloc(32)]);
 
 const seeds = {
   announcements: [
-    { id: 'ann-a', code: '40060', category: 'C', headline: 'Older', description: '', date: '2026-06-25T14:30:43', priceSensitive: false, url: '/announcements-pdfs/a.pdf', active: true, sortOrder: 1 },
-    { id: 'ann-b', code: '40060', category: 'C', headline: 'Newest', description: '', date: '2026-06-30T09:10:12', priceSensitive: false, url: '/announcements-pdfs/b.pdf', active: true, sortOrder: 0 },
-    { id: 'ann-c', code: '40999', category: 'C', headline: 'Hidden', description: '', date: '2026-07-01T09:00:00', priceSensitive: false, url: '/announcements-pdfs/c.pdf', active: false },
-    { id: 'ann-d', code: '41999', category: 'C', headline: 'Same second, later sort', description: '', date: '2026-06-25T14:30:43', priceSensitive: false, url: '/announcements-pdfs/d.pdf', active: true, sortOrder: 5 },
+    { id: 'ann-a', code: '40060', category: 'C', headline: 'Older', description: '', date: '2026-06-25T14:30:43', priceSensitive: false, url: 'https://s3.ap-southeast-1.amazonaws.com/nurengroup.com/announcement/pdf/a.pdf', active: true, sortOrder: 1 },
+    { id: 'ann-b', code: '40060', category: 'C', headline: 'Newest', description: '', date: '2026-06-30T09:10:12', priceSensitive: false, url: 'https://s3.ap-southeast-1.amazonaws.com/nurengroup.com/announcement/pdf/b.pdf', active: true, sortOrder: 0 },
+    { id: 'ann-c', code: '40999', category: 'C', headline: 'Hidden', description: '', date: '2026-07-01T09:00:00', priceSensitive: false, url: 'https://s3.ap-southeast-1.amazonaws.com/nurengroup.com/announcement/pdf/c.pdf', active: false },
+    { id: 'ann-d', code: '41999', category: 'C', headline: 'Same second, later sort', description: '', date: '2026-06-25T14:30:43', priceSensitive: false, url: 'https://s3.ap-southeast-1.amazonaws.com/nurengroup.com/announcement/pdf/d.pdf', active: true, sortOrder: 5 },
   ],
   'financial-reports': [
-    { id: 'rpt-a', code: '40510', category: 'R', title: 'Annual', description: '', date: '2025-06-18T09:13:41', priceSensitive: false, type: 'file', url: '/announcements-pdfs/e.pdf', active: true },
+    { id: 'rpt-a', code: '40510', category: 'R', title: 'Annual', description: '', date: '2025-06-18T09:13:41', priceSensitive: false, type: 'file', url: 'https://s3.ap-southeast-1.amazonaws.com/nurengroup.com/announcement/pdf/e.pdf', active: true },
   ],
 };
 
 const newAnnouncement = {
   code: '40810', category: 'NSX Director Appointment', headline: 'New one', description: 'desc',
-  date: '2026-08-01T10:00:00', priceSensitive: false, url: '/announcements-pdfs/f.pdf', active: true,
+  date: '2026-08-01T10:00:00', priceSensitive: false, url: 'https://s3.ap-southeast-1.amazonaws.com/nurengroup.com/announcement/pdf/f.pdf', active: true,
 };
 
 let dir;
@@ -75,6 +75,30 @@ describe('createInvestorStore: changes persist across a restart', () => {
     const created = store.create('announcements', newAnnouncement);
     expect(created.id).toMatch(UPLOAD_ID_RE);
     expect(open().get('announcements', created.id)).toMatchObject(newAnnouncement);
+  });
+
+  it('gives a new record a slug from its headline, unique within the collection', () => {
+    const store = open();
+    const first = store.create('announcements', newAnnouncement);
+    const second = store.create('announcements', newAnnouncement);
+    expect(first.slug).toBe('new-one');
+    expect(second.slug).toBe('new-one-2');
+    const report = store.create('financial-reports', { ...seeds['financial-reports'][0], title: '40510 Annual Report - 2026 Annual Report' });
+    expect(report.slug).toBe('40510-annual-report-2026-annual-report');
+  });
+
+  it('keeps the slug when the headline is edited, so page links never break', () => {
+    const store = open();
+    const created = store.create('announcements', newAnnouncement);
+    const updated = store.update('announcements', created.id, { ...newAnnouncement, headline: 'Renamed' });
+    expect(updated.slug).toBe(created.slug);
+  });
+
+  it('finds a record by slug', () => {
+    const store = open();
+    const created = store.create('announcements', newAnnouncement);
+    expect(store.getBySlug('announcements', created.slug)?.id).toBe(created.id);
+    expect(store.getBySlug('announcements', 'nope')).toBeNull();
   });
 
   it('updates a record in place and keeps its id', () => {

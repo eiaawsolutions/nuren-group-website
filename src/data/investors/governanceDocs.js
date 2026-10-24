@@ -1,11 +1,11 @@
-// Corporate governance documents, self-hosted under public/announcements-pdfs/
-// like the announcements and reports (ported from the Nuren investor site's
-// docsInfo.js). The slug is the single source of truth for both the page
-// (/investors/corporate-governance/<slug>) and the file on disk. Plain JS so
-// the server redirects and the prerender script can import it too.
+// Corporate governance documents (from the Nuren investor site's docsInfo.js).
+// The PDFs live where the investor site keeps them, in its S3 bucket at
+// corporate-governance/pdf/<slug>.pdf; the slug is also the page URL
+// (/investors/corporate-governance/<slug>). Plain JS so the server redirects
+// and the prerender script can import it too.
+import { s3PdfUrl } from '../../../server/investors/validate.js';
 
-const pdfPath = (slug) => `/announcements-pdfs/${slug}.pdf`;
-const doc = (label, slug) => ({ label, slug, pdflink: pdfPath(slug) });
+const doc = (label, slug) => ({ label, slug, pdflink: s3PdfUrl('corporate-governance', slug) });
 
 export const committeeCharters = [
   doc('Audit and Risk Committee Charter', 'audit-and-risk-committee-charter'),

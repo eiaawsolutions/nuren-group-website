@@ -23,7 +23,8 @@ import { sanitizeAttachment, MAX_ENQUIRY_BODY } from './server/leads/attachment.
 import { createLeadStore } from './server/leads/store.js';
 import { renderLeadEmail, leadsToCsv } from './server/leads/format.js';
 import { createInvestorStore } from './server/investors/store.js';
-import { registerInvestorRoutes, setInvestorStaticHeaders } from './server/investors/routes.js';
+import { registerInvestorRoutes } from './server/investors/routes.js';
+import { s3UploaderFromEnv } from './server/investors/s3.js';
 import { legacyRedirect } from './server/investors/redirects.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -102,6 +103,9 @@ const investorStore = createInvestorStore({
   },
   onError: logError,
 });
+// Admin uploads go to the investor site's S3 bucket once AWS keys are set;
+// until then they stay on the volume (INVESTOR_DATA_DIR).
+const investorUploader = s3UploaderFromEnv();
 
 function isEmail(value) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
@@ -194,6 +198,8 @@ app.use(helmet({
         'https://www.instagram.com',
         // The prospectus preview page embeds the prospectus from Google Drive.
         'https://drive.google.com',
+        // Investor PDFs live in the investor site's S3 bucket; the viewer frames them.
+        'https://s3.ap-southeast-1.amazonaws.com',
       ],
       frameAncestors: ["'none'"],
       baseUri: ["'self'"],
@@ -487,6 +493,8 @@ app.get('/admin/api/status', adminAuth, (req, res) => {
         persistent: investorStore.writable && Boolean(process.env.INVESTOR_DATA_DIR),
         writable: investorStore.writable,
         dir: INVESTOR_DATA_DIR,
+        // Where admin uploads go: the investor S3 bucket, or this volume when unset.
+        s3: investorUploader ? { bucket: investorUploader.bucket, region: investorUploader.region } : null,
       },
       chatModel: `${NURA_MODEL.label} (${NURA_MODEL.id})`,
       chatModelKey: NURA_MODEL.key,
@@ -577,7 +585,7 @@ app.post('/admin/api/test-enquiry', adminAuth, async (_req, res) => {
 
 // Investor announcements and financial reports: public lists, uploaded files,
 // and the admin's add / edit / hide / delete / upload (server/investors/).
-registerInvestorRoutes(app, { store: investorStore, adminAuth, onError: logError });
+registerInvestorRoutes(app, { store: investorStore, adminAuth, uploader: investorUploader, onError: logError });
 
 // `index: 'index.html'` so a request for `/investors/company` resolves to the
 // prerendered `dist/investors/company/index.html` automatically (build creates
@@ -594,7 +602,6 @@ app.use(express.static(DIST_DIR, {
     } else if (/\/assets\/.+\.(js|css|woff2?)$/.test(norm)) {
       res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
     }
-    setInvestorStaticHeaders(res, norm);
   },
 }));
 

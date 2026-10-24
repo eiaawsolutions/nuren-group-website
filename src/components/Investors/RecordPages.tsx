@@ -1,11 +1,16 @@
 import { useMemo, useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
 import { SEO, SITE_URL } from '../SEO';
 import { InvestorPage, investorCrumbs } from './InvestorLayout';
 import { formatAnnouncementDate, formatAnnouncementTime } from './format';
-import { viewerHref } from './pdfSrc';
-import { useInvestorList, type InvestorCollection, type InvestorRecord } from './useInvestorList';
+import { InlinePdfViewer } from './PdfViewer';
+import { RECORD_PATHS, recordHref } from './pdfSrc';
+import { useInvestorList, useInvestorRecords, type InvestorCollection, type InvestorRecord } from './useInvestorList';
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
+
+// Reports store their heading in `title`, announcements in `headline`.
+const headingOf = (item: InvestorRecord) => item.title || item.headline || '';
 
 function PdfIcon() {
   return (
@@ -16,19 +21,26 @@ function PdfIcon() {
   );
 }
 
-function renderRow(item: InvestorRecord) {
-  // Reports store their heading in `title`, announcements in `headline`.
-  const heading = item.title || item.headline || '';
+function renderRow(collection: InvestorCollection, item: InvestorRecord) {
+  const heading = headingOf(item);
+  const { href, external } = recordHref(collection, item);
+  const content = (
+    <>
+      <PdfIcon />
+      <span>{heading}</span>
+    </>
+  );
   return (
     <div key={item.id} className="ir-row">
       <div className="ir-code">
         <span className="ir-ticker">NRN</span>
       </div>
       <div className="ir-body">
-        <a className="ir-headline" href={viewerHref(item.url)} target="_blank" rel="noopener noreferrer">
-          <PdfIcon />
-          <span>{heading}</span>
-        </a>
+        {external ? (
+          <a className="ir-headline" href={href} target="_blank" rel="noopener noreferrer">{content}</a>
+        ) : (
+          <Link className="ir-headline" to={href}>{content}</Link>
+        )}
         {item.description && <p className="ir-desc">{item.description}</p>}
       </div>
       <div className="ir-date">
@@ -112,7 +124,7 @@ function RecordsPage({ collection, heading, title, description, path, crumb }: {
           {rows.length === 0 ? (
             <p className="ir-empty">There are no records available.</p>
           ) : (
-            rows.map(renderRow)
+            rows.map((item) => renderRow(collection, item))
           )}
         </div>
       </div>
@@ -120,13 +132,14 @@ function RecordsPage({ collection, heading, title, description, path, crumb }: {
   );
 }
 
+// Titles and descriptions follow the live investor site (nurengroup.com).
 export function AnnouncementsPage() {
   return (
     <RecordsPage
       collection="announcements"
       heading="ANNOUNCEMENTS"
-      title="Announcements | Nuren Group Limited (NSX:NRN) - Investor Relations"
-      description="Announcements for Nuren Group Limited (NSX:NRN). Market announcements and disclosures filed with the NSX."
+      title="Announcements | Nuren Group Limited (NRN) - Investor Relations"
+      description="Nuren Group Limited (NRN) investor relation - announcements to shareholders."
       path="/investors/announcements"
       crumb="Announcements"
     />
@@ -138,10 +151,52 @@ export function FinancialReportsPage() {
     <RecordsPage
       collection="financial-reports"
       heading="FINANCIAL REPORTS"
-      title="Financial Reports | Nuren Group Limited (NSX:NRN) - Investor Relations"
-      description="Financial Reports for Nuren Group Limited (NSX:NRN). Quarterly, half-yearly, preliminary and annual reports filed with the NSX."
+      title="Financial Reports | Nuren Group Limited (NRN) - Investor Relations"
+      description="Nuren Group Limited (NRN) investor relation - annual reports, audited financial statement, interim management account."
       path="/investors/reports"
       crumb="Financial Reports"
     />
   );
+}
+
+/**
+ * /investors/announcements/:slug and /investors/reports/:slug: one document
+ * in the inline viewer, as on the investor site. Records added in the admin
+ * after the build are found once the live list has loaded.
+ */
+function RecordDocPage({ collection, listName }: { collection: InvestorCollection; listName: string }) {
+  const { slug = '' } = useParams();
+  const { items, loaded } = useInvestorRecords(collection);
+  const record = items.find((r) => r.slug === slug);
+  const path = `${RECORD_PATHS[collection]}/${slug}`;
+
+  if (!record) {
+    return (
+      <>
+        <SEO title={`${listName} | Nuren Group Limited (NRN)`} description={listName} canonical={`${SITE_URL}${RECORD_PATHS[collection]}`} noindex />
+        {loaded ? <InlinePdfViewer src="" /> : <div className="ir-root ir-pdf-viewer" />}
+      </>
+    );
+  }
+
+  const heading = headingOf(record);
+  return (
+    <>
+      <SEO
+        title={`${heading} | Nuren Group Limited (NSX:NRN)`}
+        description={record.description || heading}
+        canonical={`${SITE_URL}${path}`}
+        breadcrumbs={[...investorCrumbs(listName, RECORD_PATHS[collection]), { name: heading, url: path }]}
+      />
+      <InlinePdfViewer src={record.url} title={heading} />
+    </>
+  );
+}
+
+export function AnnouncementDocPage() {
+  return <RecordDocPage collection="announcements" listName="Announcements" />;
+}
+
+export function FinancialReportDocPage() {
+  return <RecordDocPage collection="financial-reports" listName="Financial Reports" />;
 }

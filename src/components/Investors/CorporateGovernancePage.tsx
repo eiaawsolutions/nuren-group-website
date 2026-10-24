@@ -2,20 +2,20 @@ import { Link, useParams } from 'react-router-dom';
 import { SEO, SITE_URL } from '../SEO';
 import { InvestorPage, investorCrumbs } from './InvestorLayout';
 import { InlinePdfViewer } from './PdfViewer';
-import { viewerHref } from './pdfSrc';
 import { committeeCharters, governanceDocs, findGovernanceDoc } from '../../data/investors/governanceDocs.js';
 
 const PATH = '/investors/corporate-governance';
 
 type GovernanceDoc = { label: string; slug: string; pdflink: string };
 
+// Each document opens on its own page, as on the investor site.
 function LinkBox({ heading, docs }: { heading: string; docs: GovernanceDoc[] }) {
   return (
     <div className="ir-linkbox">
       <h2>{heading}</h2>
       <div className="ir-links">
         {docs.map((doc) => (
-          <Link key={doc.slug} to={viewerHref(doc.pdflink)}>
+          <Link key={doc.slug} to={`${PATH}/${doc.slug}`}>
             {doc.label}
           </Link>
         ))}
@@ -59,7 +59,7 @@ export function GovernanceDocPage() {
         breadcrumbs={doc ? investorCrumbs(doc.label, path) : undefined}
         noindex={!doc}
       />
-      <InlinePdfViewer src={doc ? doc.pdflink : ''} />
+      <InlinePdfViewer src={doc ? doc.pdflink : ''} title={doc?.label} />
     </>
   );
 }

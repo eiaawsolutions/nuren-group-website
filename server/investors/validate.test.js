@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { validateRecord, isAllowedRecordUrl, FIELD_LIMITS, COLLECTIONS } from './validate.js';
+import {
+  validateRecord, isAllowedRecordUrl, isS3Pdf, s3PdfUrl, slugify, FIELD_LIMITS, COLLECTIONS, SLUG_MAX,
+} from './validate.js';
+
+const S3 = 'https://s3.ap-southeast-1.amazonaws.com/nurengroup.com';
 
 const announcement = {
   code: '40060',
@@ -8,7 +12,7 @@ const announcement = {
   description: 'Delisting from NSX on 30 Jun26',
   date: '2026-06-25T14:30:43',
   priceSensitive: false,
-  url: '/announcements-pdfs/delisting-from-nsx-on-30-jun26.pdf',
+  url: `${S3}/announcement/pdf/40060-nsx-removal-from-official-list-delisting-from-nsx-on-30-jun26.pdf`,
   active: true,
 };
 
@@ -19,7 +23,7 @@ const report = {
   description: 'Quarterly Report to 31 December 2025',
   date: '2026-01-29T09:08:43',
   type: 'file',
-  url: '/announcements-pdfs/quarterly-report-to-31-december-2025.pdf',
+  url: `${S3}/finance-report/pdf/40560-nsx-quarterly-report-quarterly-report-to-31-december-2025.pdf`,
 };
 
 describe('COLLECTIONS', () => {
@@ -65,11 +69,12 @@ describe('validateRecord: announcements', () => {
     expect(validateRecord('announcements', { ...announcement, sortOrder: '3' }).value).not.toHaveProperty('sortOrder');
   });
 
-  it('ignores fields the form does not have', () => {
-    const { value } = validateRecord('announcements', { ...announcement, title: 'x', type: 'link', id: 'evil', extra: 1 });
+  it('ignores fields the form does not have, including the server-managed slug', () => {
+    const { value } = validateRecord('announcements', { ...announcement, title: 'x', type: 'link', id: 'evil', slug: '../x', extra: 1 });
     expect(value).not.toHaveProperty('title');
     expect(value).not.toHaveProperty('type');
     expect(value).not.toHaveProperty('id');
+    expect(value).not.toHaveProperty('slug');
     expect(value).not.toHaveProperty('extra');
   });
 });
@@ -105,8 +110,8 @@ describe('validateRecord: dates', () => {
 });
 
 describe('isAllowedRecordUrl', () => {
-  it('allows self-hosted PDFs, uploaded files and https links', () => {
-    expect(isAllowedRecordUrl('/announcements-pdfs/2025-annual-report.pdf')).toBe(true);
+  it('allows the investor S3 bucket, uploaded files and https links', () => {
+    expect(isAllowedRecordUrl(`${S3}/finance-report/pdf/40510-nsx-annual-report-2025-annual-report.pdf`)).toBe(true);
     expect(isAllowedRecordUrl('/api/files/3f2b8c1e-9d4a-4b7e-8f21-0c6a5e9d1b23')).toBe(true);
     expect(isAllowedRecordUrl('https://drive.google.com/file/d/abc/view')).toBe(true);
   });
@@ -119,9 +124,8 @@ describe('isAllowedRecordUrl', () => {
       'http://example.com/a.pdf',
       '//evil.com/a.pdf',
       '/\\evil.com',
-      '/announcements-pdfs/../server.js',
-      '/announcements-pdfs/report.PDF.exe',
-      '/announcements-pdfs/Report Final.pdf',
+      // The PDFs now live on S3; there are no self-hosted copies to link to.
+      '/announcements-pdfs/2025-annual-report.pdf',
       '/api/files/not-a-uuid',
       '/api/files/../../etc/passwd',
       'https://exa mple.com',
@@ -135,6 +139,55 @@ describe('isAllowedRecordUrl', () => {
   it('is enforced by validateRecord', () => {
     const { errors } = validateRecord('announcements', { ...announcement, url: 'javascript:alert(1)' });
     expect(errors).toHaveProperty('url');
+  });
+});
+
+describe('isS3Pdf / s3PdfUrl', () => {
+  it('recognises PDFs in the investor folders of the bucket', () => {
+    expect(isS3Pdf(`${S3}/announcement/pdf/agm-meeting-minutes-and-result-2026-agm.pdf`)).toBe(true);
+    expect(isS3Pdf(`${S3}/finance-report/pdf/40510-annual-report-2026-annual-report.pdf`)).toBe(true);
+    expect(isS3Pdf(`${S3}/corporate-governance/pdf/board-charter.pdf`)).toBe(true);
+  });
+
+  it('refuses other buckets, folders, file types and tricks', () => {
+    for (const url of [
+      'https://s3.ap-southeast-1.amazonaws.com/other-bucket/announcement/pdf/a.pdf',
+      `${S3}/mediahub/pdf/a.pdf`,
+      `${S3}/announcement/pdf/a.docx`,
+      `${S3}/announcement/pdf/../../secret.pdf`,
+      `${S3}/announcement/pdf/a.pdf?x=1`,
+      `${S3}.evil.com/announcement/pdf/a.pdf`,
+      'http://s3.ap-southeast-1.amazonaws.com/nurengroup.com/announcement/pdf/a.pdf',
+    ]) {
+      expect(isS3Pdf(url), url).toBe(false);
+    }
+  });
+
+  it('builds the same URL shape the investor site used', () => {
+    expect(s3PdfUrl('corporate-governance', 'board-charter')).toBe(`${S3}/corporate-governance/pdf/board-charter.pdf`);
+  });
+});
+
+describe('slugify', () => {
+  it('reproduces the investor site slugs', () => {
+    expect(slugify('AGM Meeting Minutes and Result - 2026 AGM')).toBe('agm-meeting-minutes-and-result-2026-agm');
+    expect(slugify('40810 NSX Director Appointment/Resignation - Appointment of Additional Directors'))
+      .toBe('40810-nsx-director-appointmentresignation-appointment-of-additional-directors');
+    expect(slugify("40024 NSX Nominated Adviser's Declaration - Nominated Adviser's Declaration"))
+      .toBe('40024-nsx-nominated-advisers-declaration-nominated-advisers-declaration');
+    expect(slugify('40530 NSX Preliminary/Final Statement - Preliminary final report - Mar26'))
+      .toBe('40530-nsx-preliminaryfinal-statement-preliminary-final-report-mar26');
+  });
+
+  it('cuts at 120 characters like the investor site', () => {
+    const long = '40050 NSX Suspension from Official Quotation - Suspension from Official Quotation - Non-payment of 2025-26 Annual Listing Fees';
+    expect(slugify(long)).toBe('40050-nsx-suspension-from-official-quotation-suspension-from-official-quotation-non-payment-of-2025-26-annual-listing-fe');
+    expect(SLUG_MAX).toBe(120);
+  });
+
+  it('never ends in a hyphen and falls back for empty input', () => {
+    expect(slugify('Report -  ')).toBe('report');
+    expect(slugify('!!!')).toBe('');
   });
 });
 

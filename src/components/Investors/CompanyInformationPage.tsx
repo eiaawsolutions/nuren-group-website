@@ -54,8 +54,8 @@ export function CompanyInformationPage() {
   return (
     <InvestorPage>
       <SEO
-        title="Company Information | Nuren Group Limited (NSX:NRN) - Investor Relations"
-        description="Company Information for Nuren Group Limited (NSX:NRN). Company details, contact, corporate advisers and people."
+        title="Company Information | Nuren Group Limited (NRN) - Investor Relations"
+        description="Nuren Group Limited (NRN) investor relation - company information, contact information, corporate structure, board members."
         canonical={`${SITE_URL}${PATH}`}
         breadcrumbs={investorCrumbs('Company Information', PATH)}
       />

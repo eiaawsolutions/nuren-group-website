@@ -4,9 +4,9 @@ import { matchesSearch, emptyRecord, toDateTimeLocal, ADMIN_COPY } from './inves
 const announcement = {
   id: 'a', code: '40450', category: 'NSX Major Contract Notice',
   headline: '40450 NSX Major Contract Notice - Proposed NASDAQ IPO and Appointment of Lead Adviser',
-  description: 'Appointment of ZICO Evolve Capital as Lead Adviser', date: '2025-04-30T11:18:07', url: '/announcements-pdfs/a.pdf',
+  description: 'Appointment of ZICO Evolve Capital as Lead Adviser', date: '2025-04-30T11:18:07', url: 'https://s3.ap-southeast-1.amazonaws.com/nurengroup.com/announcement/pdf/a.pdf',
 };
-const report = { id: 'r', code: '40510', title: '40510 NSX Annual Report - 2025 Annual Report', description: '', date: '2025-06-18T09:13:41', url: '/announcements-pdfs/b.pdf' };
+const report = { id: 'r', code: '40510', title: '40510 NSX Annual Report - 2025 Annual Report', description: '', date: '2025-06-18T09:13:41', url: 'https://s3.ap-southeast-1.amazonaws.com/nurengroup.com/announcement/pdf/b.pdf' };
 
 describe('matchesSearch', () => {
   it('matches announcements by headline, description or code, ignoring case', () => {

@@ -12,7 +12,7 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import { COLLECTIONS, byReleaseDate } from './validate.js';
+import { COLLECTIONS, SLUG_MAX, byReleaseDate, slugify } from './validate.js';
 
 export const UPLOAD_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
@@ -80,6 +80,17 @@ export function createInvestorStore({ dir, seeds, onError = () => {} }) {
   };
   const save = (collection) => writeJson(fileFor(collection), records[collection]);
 
+  function uniqueSlug(collection, base) {
+    const stem = base || 'document';
+    const taken = new Set(rows(collection).map((r) => r.slug));
+    if (!taken.has(stem)) return stem;
+    for (let n = 2; ; n += 1) {
+      const suffix = `-${n}`;
+      const candidate = `${stem.slice(0, SLUG_MAX - suffix.length)}${suffix}`;
+      if (!taken.has(candidate)) return candidate;
+    }
+  }
+
   return {
     get writable() {
       return writable;
@@ -97,19 +108,29 @@ export function createInvestorStore({ dir, seeds, onError = () => {} }) {
       return rows(collection).find((r) => r.id === id) ?? null;
     },
 
-    /** `value` must already be validated (see validate.js). */
+    getBySlug(collection, slug) {
+      return rows(collection).find((r) => r.slug === slug) ?? null;
+    },
+
+    /**
+     * `value` must already be validated (see validate.js). The slug (page URL
+     * and S3 file name) comes from the headline or title, as on the investor
+     * site, and is made unique with -2, -3…
+     */
     create(collection, value) {
-      const record = { id: crypto.randomUUID(), ...value };
+      const titleField = COLLECTIONS[collection]?.titleField;
+      const record = { id: crypto.randomUUID(), ...value, slug: uniqueSlug(collection, slugify(value[titleField])) };
       rows(collection).push(record);
       save(collection);
       return record;
     },
 
+    /** Keeps the record's slug, so its page URL survives a headline edit. */
     update(collection, id, value) {
       const list = rows(collection);
       const index = list.findIndex((r) => r.id === id);
       if (index === -1) return null;
-      list[index] = { ...value, id };
+      list[index] = { ...value, id, slug: list[index].slug };
       save(collection);
       return list[index];
     },

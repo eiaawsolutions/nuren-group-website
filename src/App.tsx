@@ -12,6 +12,8 @@ import {
   ProspectusPage,
   ProspectusPreviewPage,
   PdfViewerPage,
+  AnnouncementDocPage,
+  FinancialReportDocPage,
 } from './components/Investors';
 import { Chatbot } from './components/Chatbot/Chatbot';
 import { ContactModal } from './components/Enquiry/ContactModal';
@@ -2106,7 +2108,9 @@ export default function App() {
                     <Route path="/investors/corporate-governance" element={<CorporateGovernancePage />} />
                     <Route path="/investors/corporate-governance/:slug" element={<GovernanceDocPage />} />
                     <Route path="/investors/announcements" element={<AnnouncementsPage />} />
+                    <Route path="/investors/announcements/:slug" element={<AnnouncementDocPage />} />
                     <Route path="/investors/reports" element={<FinancialReportsPage />} />
+                    <Route path="/investors/reports/:slug" element={<FinancialReportDocPage />} />
                     <Route path="/investors/prospectus" element={<ProspectusPage />} />
                     <Route path="/investors/prospectus/preview" element={<ProspectusPreviewPage />} />
                     <Route path="/pdf-viewer" element={<PdfViewerPage />} />

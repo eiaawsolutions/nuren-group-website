@@ -3,17 +3,21 @@
 // ({ data: { data, totalDocs }, success }) so the pages port unchanged. The
 // admin endpoints sit behind this site's admin login instead of the investor
 // site's forgeable `nurengroup_admin=true` cookie.
+//
+// Documents live where the investor site keeps them, in its S3 bucket. Admin
+// uploads go there too when an S3 uploader is configured (s3.js); without
+// one they are kept on this server's volume and served from /api/files/:id.
 import express from 'express';
 import { ATTACHMENT_TYPES, safeFilename } from '../leads/attachment.js';
-import { COLLECTIONS, MAX_UPLOAD_BYTES, UPLOAD_EXTENSIONS, validateRecord } from './validate.js';
+import { COLLECTIONS, MAX_UPLOAD_BYTES, UPLOAD_EXTENSIONS, slugify, validateRecord } from './validate.js';
 
 export { MAX_UPLOAD_BYTES };
 
 // PDFs open in the inline viewer; Word files can't render in a browser, so they download.
 const INLINE_TYPES = new Set(['application/pdf']);
 
-// The site-wide CSP says frame-ancestors 'none'. A PDF the viewer page shows
-// in an iframe must allow this site to frame it, or the browser blanks it.
+// The site-wide CSP says frame-ancestors 'none'. An uploaded PDF the viewer
+// page shows in an iframe must allow this site to frame it.
 const PDF_FRAME_HEADERS = {
   'Content-Security-Policy': "frame-ancestors 'self'",
   'X-Frame-Options': 'SAMEORIGIN',
@@ -24,12 +28,13 @@ const PUBLIC_LISTS = {
   '/api/getFinancialReport': 'financial-reports',
 };
 
-/** For express.static's setHeaders: frameable headers on self-hosted investor PDFs. */
-export function setInvestorStaticHeaders(res, filePath) {
-  const norm = String(filePath).replace(/\\/g, '/');
-  if (!/\/announcements-pdfs\/[^/]+\.pdf$/i.test(norm)) return;
-  for (const [key, value] of Object.entries(PDF_FRAME_HEADERS)) res.setHeader(key, value);
-}
+const decodeHeader = (value) => {
+  try {
+    return decodeURIComponent(value || '');
+  } catch {
+    return '';
+  }
+};
 
 /**
  * Admin changes arrive with the password in an Authorization header set by
@@ -81,10 +86,15 @@ function checkUpload(req) {
   if (!type.magic.every((byte, i) => buffer[i] === byte)) {
     return { error: `That file doesn't look like a real .${ext} file.` };
   }
-  return { file: { buffer, filename: safeFilename(name, ext), mime: type.mime } };
+  return { file: { buffer, filename: safeFilename(name, ext), mime: type.mime, ext } };
 }
 
-export function registerInvestorRoutes(app, { store, adminAuth, onError = () => {} }) {
+/**
+ * @param {object} deps
+ * @param {ReturnType<import('./s3.js').createS3Uploader> | null} [deps.uploader]
+ *   when set, admin uploads go to the investor S3 bucket instead of the volume
+ */
+export function registerInvestorRoutes(app, { store, adminAuth, uploader = null, onError = () => {} }) {
   for (const [route, collection] of Object.entries(PUBLIC_LISTS)) {
     app.get(route, (_req, res) => {
       const data = store.list(collection);
@@ -136,11 +146,28 @@ export function registerInvestorRoutes(app, { store, adminAuth, onError = () => 
 
   // The password is checked before the body is read, so an anonymous caller
   // can't make the server buffer 25 MB.
-  app.post('/admin/api/files', rejectCrossSite, adminAuth, readUploadBody, (req, res) => {
+  app.post('/admin/api/files', rejectCrossSite, adminAuth, readUploadBody, async (req, res) => {
     const { file, error } = checkUpload(req);
     if (error) return res.status(400).json({ error });
+
+    if (uploader) {
+      const spec = COLLECTIONS[req.get('x-collection')];
+      if (!spec) return res.status(400).json({ error: 'Say which list the file is for.' });
+      // Named like the investor site's files: the slug of the record's title,
+      // or of the file name while the title is still blank.
+      const slug = slugify(decodeHeader(req.get('x-title'))) || slugify(file.filename.replace(/\.[^.]*$/, ''));
+      try {
+        const { url } = await uploader.upload({ folder: spec.folder, slug, buffer: file.buffer, mime: file.mime, ext: file.ext });
+        return res.status(201).json({ success: true, storage: 's3', url, filename: file.filename, contentType: file.mime });
+      } catch (err) {
+        onError('investors:s3', err?.message || err);
+        return res.status(502).json({ error: err?.message || 'Could not upload to S3.' });
+      }
+    }
+
     try {
-      return res.status(201).json({ success: true, ...store.saveUpload(file) });
+      const { ext: _ext, ...toSave } = file;
+      return res.status(201).json({ success: true, storage: 'server', ...store.saveUpload(toSave) });
     } catch (err) {
       onError('investors:upload', err?.message || err);
       return res.status(500).json({ error: 'Could not save the file.' });

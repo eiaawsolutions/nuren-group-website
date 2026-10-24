@@ -8,9 +8,10 @@ import './investors.css';
  * The investor site's inline PDF viewer: the document is embedded with the
  * browser viewer's toolbar hidden (#toolbar=0&navpanes=0), and right-click and
  * Ctrl/Cmd+P / +S are suppressed on the page. This discourages but cannot
- * prevent saving or printing. Only this site's own PDFs are embedded.
+ * prevent saving or printing. Only the investor S3 bucket's PDFs and files
+ * uploaded to this server are embedded (see pdfSrc.ts).
  */
-export function InlinePdfViewer({ src }: { src: string }) {
+export function InlinePdfViewer({ src, title = 'Document viewer' }: { src: string; title?: string }) {
   useEffect(() => {
     window.scrollTo(0, 0);
     const blockMenu = (e: MouseEvent) => e.preventDefault();
@@ -32,7 +33,7 @@ export function InlinePdfViewer({ src }: { src: string }) {
     <div className="ir-root ir-pdf-viewer">
       <div className="ir-pv-frame">
         {embedSrc ? (
-          <iframe className="ir-pv-document" src={embedSrc} title="Document viewer" />
+          <iframe className="ir-pv-document" src={embedSrc} title={title} />
         ) : (
           <p className="ir-pv-fallback">Document not found.</p>
         )}
@@ -41,7 +42,7 @@ export function InlinePdfViewer({ src }: { src: string }) {
   );
 }
 
-/** /pdf-viewer?src=/announcements-pdfs/<file>.pdf — used by the announcement and report tables. */
+/** /pdf-viewer?src=<PDF URL>: the viewer for any allowed PDF (records without a page of their own). */
 export function PdfViewerPage() {
   const [params] = useSearchParams();
   return (

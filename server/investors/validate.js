@@ -2,12 +2,23 @@
 // shared by the admin form in the browser and the server, so the two cannot
 // drift. The server is the authority: everything arriving at the admin API is
 // re-validated here. Field names match the Nuren investor site these records
-// were ported from, so its seed data loads unchanged.
+// were ported from, so its data loads unchanged.
 
+// `folder` is where the investor site keeps each collection's PDFs in its S3
+// bucket (see S3_PUBLIC_BASE).
 export const COLLECTIONS = {
-  announcements: { titleField: 'headline', codeRequired: true, hasType: false },
-  'financial-reports': { titleField: 'title', codeRequired: false, hasType: true },
+  announcements: { titleField: 'headline', codeRequired: true, hasType: false, folder: 'announcement' },
+  'financial-reports': { titleField: 'title', codeRequired: false, hasType: true, folder: 'finance-report' },
 };
+
+// The investor site's documents live in the S3 bucket `nurengroup.com`
+// (ap-southeast-1), one folder per kind: announcement/, finance-report/ and
+// corporate-governance/, each with the PDFs under pdf/<slug>.pdf.
+export const S3_PUBLIC_BASE = 'https://s3.ap-southeast-1.amazonaws.com/nurengroup.com';
+export const S3_FOLDERS = ['announcement', 'finance-report', 'corporate-governance'];
+
+// The investor site's slugs are capped at this length.
+export const SLUG_MAX = 120;
 
 export const REPORT_TYPES = ['file', 'link'];
 
@@ -24,13 +35,39 @@ export const FIELD_LIMITS = {
   url: 500,
 };
 
-// Self-hosted PDFs keep the investor site's lowercase-hyphen file names.
-const PDF_PATH_RE = /^\/announcements-pdfs\/[a-z0-9][a-z0-9-]*\.pdf$/;
+const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const S3_PDF_RE = new RegExp(`^${escapeRe(S3_PUBLIC_BASE)}/(?:${S3_FOLDERS.join('|')})/pdf/[a-z0-9][a-z0-9-]*\\.pdf$`);
 const UPLOAD_PATH_RE = /^\/api\/files\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const HTTPS_RE = /^https:\/\/[^\s<>"'`\\]+$/;
 const DATE_RE = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/;
 
 const oneLine = (value, max) => String(value ?? '').replace(/[\r\n]+/g, ' ').trim().slice(0, max);
+
+/** A PDF in one of the investor folders of the investor site's S3 bucket. */
+export function isS3Pdf(url) {
+  return typeof url === 'string' && S3_PDF_RE.test(url);
+}
+
+/** The public URL of `<folder>/pdf/<slug>.pdf` in the bucket. */
+export function s3PdfUrl(folder, slug) {
+  return `${S3_PUBLIC_BASE}/${folder}/pdf/${slug}.pdf`;
+}
+
+/**
+ * The investor site's slug rule, used for page URLs and S3 file names:
+ * lowercase, keep letters, digits, spaces and hyphens, spaces become
+ * hyphens, at most 120 characters.
+ */
+export function slugify(text) {
+  return String(text ?? '')
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .slice(0, SLUG_MAX)
+    .replace(/^-+|-+$/g, '');
+}
 
 /**
  * Display order for the public tables and the admin: newest first; rows
@@ -42,14 +79,14 @@ export function byReleaseDate(a, b) {
 }
 
 /**
- * Where a record's link may point: a self-hosted PDF, a file uploaded through
- * the admin, or an https page (e.g. a Drive link). Anything else, including
- * `javascript:` and relative paths elsewhere on the site, is refused because
- * the public tables render it as a link.
+ * Where a record's link may point: a PDF in the investor S3 bucket, a file
+ * uploaded to this server, or another https page (e.g. a Drive link).
+ * Anything else, including `javascript:` and relative paths elsewhere on the
+ * site, is refused because the public tables render it as a link.
  */
 export function isAllowedRecordUrl(url) {
   if (typeof url !== 'string' || !url || url.length > FIELD_LIMITS.url) return false;
-  if (PDF_PATH_RE.test(url) || UPLOAD_PATH_RE.test(url)) return true;
+  if (UPLOAD_PATH_RE.test(url)) return true;
   if (!HTTPS_RE.test(url)) return false;
   try {
     return new URL(url).protocol === 'https:';
@@ -106,7 +143,7 @@ export function validateRecord(collection, raw) {
   if (!value.date) errors.date = 'Please enter a valid release date and time.';
   if (!value.url) errors.url = 'Please add a PDF link or upload a file.';
   else if (!isAllowedRecordUrl(value.url)) {
-    errors.url = 'Use a /announcements-pdfs/… file, an uploaded file, or an https:// link.';
+    errors.url = 'Upload a file, or paste an https:// link (e.g. the PDF in the S3 bucket).';
   }
 
   return { value, errors };

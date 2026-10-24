@@ -13,7 +13,7 @@ interface Status {
     enquiryFromEmail: string;
     enquiryRecipient: string;
     leadStorage: { persistent: boolean; writable: boolean; dir: string };
-    investorStorage: { persistent: boolean; writable: boolean; dir: string };
+    investorStorage: { persistent: boolean; writable: boolean; dir: string; s3: { bucket: string; region: string } | null };
     chatModel: string;
     chatModelKey: string;
     chatEffort: string | null;

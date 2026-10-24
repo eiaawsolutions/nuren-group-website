@@ -16,6 +16,7 @@ export interface InvestorRecord {
   url: string;
   active?: boolean;
   sortOrder?: number;
+  slug?: string;
 }
 
 export type InvestorCollection = 'announcements' | 'financial-reports';
@@ -31,11 +32,13 @@ const visible = (rows: InvestorRecord[]) => rows.filter((r) => r.active !== fals
  * The public list for a collection. It starts from the seed bundled at build
  * time, so the prerendered HTML (what crawlers read) and `npm run dev` show
  * the full table, then swaps in the live list the admin edits. If the live
- * fetch fails, the seed stays on screen.
+ * fetch fails, the seed stays on screen. `loaded` turns true once the live
+ * list (or its failure) is in, so a page can tell "not found" from "not yet".
  */
-export function useInvestorList(collection: InvestorCollection): InvestorRecord[] {
+export function useInvestorRecords(collection: InvestorCollection): { items: InvestorRecord[]; loaded: boolean } {
   const { endpoint, seed } = SOURCES[collection];
   const [items, setItems] = useState<InvestorRecord[]>(() => visible(seed));
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -46,11 +49,18 @@ export function useInvestorList(collection: InvestorCollection): InvestorRecord[
       })
       .catch(() => {
         // Keep the bundled list.
+      })
+      .finally(() => {
+        if (!cancelled) setLoaded(true);
       });
     return () => {
       cancelled = true;
     };
   }, [endpoint]);
 
-  return items;
+  return { items, loaded };
+}
+
+export function useInvestorList(collection: InvestorCollection): InvestorRecord[] {
+  return useInvestorRecords(collection).items;
 }

@@ -9,7 +9,7 @@ import { ADMIN_COPY, emptyRecord, matchesSearch, type RecordDraft } from './inve
 interface Props {
   collection: InvestorCollection;
   authHeader: string;
-  storage: { persistent: boolean; writable: boolean; dir: string };
+  storage: { persistent: boolean; writable: boolean; dir: string; s3: { bucket: string; region: string } | null };
 }
 
 type Notice = { kind: 'ok' | 'error'; text: string } | null;
@@ -104,10 +104,13 @@ export function InvestorRecordsPanel({ collection, authHeader, storage }: Props)
         }`}
       >
         {storage.persistent
-          ? `Announcements, reports and uploaded files are saved to ${storage.dir} and survive deploys.`
+          ? `Announcements and reports are saved to ${storage.dir} and survive deploys.`
           : storage.writable
           ? 'Changes are saved on the server disk, which is wiped on every deploy. Mount a Railway volume and set INVESTOR_DATA_DIR to its path to keep them.'
-          : 'The server disk is not writable, so changes last only until the next restart, and uploads are refused.'}
+          : 'The server disk is not writable, so changes last only until the next restart.'}{' '}
+        {storage.s3
+          ? `Uploaded files go to the S3 bucket ${storage.s3.bucket}, like the investor site's.`
+          : 'Uploaded files are kept on this server; set the AWS keys in Railway to upload to the investor S3 bucket instead.'}
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -409,17 +412,24 @@ function EditPopup({ collection, initial, authHeader, onClose, onSave }: {
           label={
             <>
               {isReports ? 'File Link/URL' : 'PDF Link / URL'}{' '}
-              <em className="normal-case text-slate-600">(paste a link, e.g. /announcements-pdfs/&lt;file&gt;.pdf or a Drive URL)</em>
+              <em className="normal-case text-slate-600">(paste a link, e.g. the PDF in the S3 bucket or a Drive URL)</em>
             </>
           }
           error={errors.url}
         >
-          <input className={inputCls} value={draft.url} placeholder="/announcements-pdfs/..." onChange={(e) => set('url', e.target.value)} />
+          <input
+            className={inputCls}
+            value={draft.url}
+            placeholder="https://s3.ap-southeast-1.amazonaws.com/nurengroup.com/..."
+            onChange={(e) => set('url', e.target.value)}
+          />
         </Labelled>
 
         <FileUploadField
           value={draft.url}
           authHeader={authHeader}
+          collection={collection}
+          title={(draft[titleField] as string) || ''}
           // An upload also sets a report's Type to "file", as on the investor site.
           onChange={(url) => setDraft((prev) => ({ ...prev, url, ...(isReports && url ? { type: 'file' as const } : {}) }))}
         />
