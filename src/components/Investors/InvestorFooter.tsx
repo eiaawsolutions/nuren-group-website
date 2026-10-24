@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import '@fontsource-variable/jost';
 import '@fontsource-variable/urbanist';
 import './investors.css';
+import { isPlainClick } from '../clicks';
 import { FOOTER_MENU, FOOTER_PHONE, FOOTER_SOCIALS, QUICKLINKS } from '../../data/investors/footerLinks';
 import type { FooterLink } from '../../data/investors/footerLinks';
 
@@ -14,8 +15,7 @@ import type { FooterLink } from '../../data/investors/footerLinks';
  */
 export function InvestorFooter({ onContactClick }: { onContactClick: () => void }) {
   const openEnquiry = (e: MouseEvent<HTMLAnchorElement>) => {
-    // Let modified clicks (new tab / window) follow the href.
-    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+    if (!isPlainClick(e)) return;
     e.preventDefault();
     onContactClick();
   };
