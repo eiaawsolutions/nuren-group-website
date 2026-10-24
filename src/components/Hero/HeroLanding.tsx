@@ -3,6 +3,7 @@ import type { VideoHTMLAttributes } from 'react';
 import { motion } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
+import { SEO, SITE_URL } from '../SEO';
 
 // Background video served from public/hero/. The `#t=0.001` media fragment
 // nudges iOS Safari into painting the first frame even when it refuses to
@@ -86,14 +87,13 @@ export const HeroLanding = () => {
   // off-screen when the browser chrome is showing.
   return (
     <div className="fixed inset-0 w-screen h-dvh overflow-hidden bg-black">
+      {/* Canonical points search engines at the rich /home page so the splash doesn't dilute SEO. */}
+      <SEO
+        title="Nuren Group · Empower Women in Parenting, Education & Maternity Wellness"
+        description="Nuren Group — Southeast Asia's leading community-powered commerce platform, empowering women in parenting, education, and maternity wellness."
+        canonical={`${SITE_URL}/home`}
+      />
       <Helmet>
-        <title>Nuren Group · Empower Women in Parenting, Education & Maternity Wellness</title>
-        <meta
-          name="description"
-          content="Nuren Group — Southeast Asia's leading community-powered commerce platform, empowering women in parenting, education, and maternity wellness."
-        />
-        {/* Point search engines at the rich /home page so the splash doesn't dilute SEO. */}
-        <link rel="canonical" href="https://nurengroup.com/home" />
         {/* iOS paints the notch / home-indicator safe areas with the page
             background in landscape — make it black here (instead of the
             site-wide white) so no white bars flank the video. `!` is needed
