@@ -429,6 +429,7 @@
 /* ---- Inline PDF viewer ---- */
 
 .ir-pdf-viewer {
+  position: relative;
   display: flex;
   flex-direction: column;
   background-color: var(--ir-page);
@@ -436,7 +437,19 @@
   min-height: 100vh;
 }
 
+/* The skyline sits along the bottom, behind the document. */
+.ir-pdf-viewer .ir-skyline {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  margin-top: 0;
+  z-index: 0;
+}
+
 .ir-pv-frame {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
   flex: 1;
@@ -557,6 +570,136 @@
   padding: 10px 20px;
   border: solid 1px rgb(236, 208, 227);
   color: #f25075;
+}
+
+/* ---- Footer (the investor site's components/footer) ---- */
+
+.ir-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background-color: #250a1e;
+  padding: 50px 10px;
+  color: #937e88;
+  font-size: 16px;
+  line-height: normal;
+}
+
+.ir-root .ir-urban {
+  font-family: "Urbanist Variable", "Urbanist", sans-serif;
+}
+
+.ir-footer h3 {
+  margin-bottom: 30px;
+  font-size: 30px;
+  font-weight: 700;
+  color: white;
+}
+
+.ir-footer a {
+  color: inherit;
+  transition: color 0.15s;
+}
+
+.ir-footer a:hover {
+  color: white;
+}
+
+.ir-footer a:focus-visible {
+  outline: 2px solid white;
+  outline-offset: 2px;
+}
+
+.ir-quicklinks {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 1000px;
+  gap: 5px;
+}
+
+.ir-quicklinks a {
+  font-size: 15px;
+  padding: 5px 15px;
+  white-space: nowrap;
+  border: 1px solid rgb(99, 81, 90);
+  border-radius: 99px;
+}
+
+.ir-footer-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  max-width: 1500px;
+  margin-top: 100px;
+}
+
+.ir-footer-logo {
+  width: 150px;
+  height: auto;
+}
+
+.ir-footer-middle,
+.ir-footer-right {
+  display: flex;
+  flex-direction: column;
+}
+
+.ir-footer-bottom nav {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.ir-footer-social {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.ir-footer-social a {
+  display: flex;
+  align-items: center;
+}
+
+.ir-footer-social img {
+  width: 20px;
+  height: 20px;
+}
+
+@media (max-width: 850px) {
+  .ir-quicklinks a {
+    font-size: 12px;
+  }
+  .ir-footer-bottom {
+    flex-direction: column;
+  }
+  .ir-footer-middle {
+    order: 3;
+    width: 100%;
+    align-items: center;
+  }
+  .ir-footer-right {
+    margin: 30px 0 40px;
+    align-items: center;
+  }
+  .ir-footer-bottom nav {
+    flex-direction: column;
+    width: 100%;
+    margin-bottom: 20px;
+  }
+  .ir-footer-bottom nav a {
+    width: 100%;
+    text-align: center;
+    padding: 3px 10px;
+    border-radius: 99px;
+    background: rgba(255, 255, 255, 0.1);
+  }
 }
 
 /* ---- Prospectus preview (Google Drive embed) ---- */

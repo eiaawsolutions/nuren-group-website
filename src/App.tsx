@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { BrowserRouter, Routes, Route, Link, Navigate, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import { legacyRedirect } from '../server/investors/redirects.js';
+import { usesInvestorFooter } from './data/investors/footerLinks';
 import {
+  InvestorFooter,
   CompanyInformationPage,
   CorporateGovernancePage,
   GovernanceDocPage,
@@ -2061,12 +2063,29 @@ const Home = ({ onContactClick }: { onContactClick: () => void }) => {
   );
 };
 
-// Client-side twin of the server's 301s for old investor URLs
+// Client-side twin of the server's 301s for moved URLs
 // (server/investors/redirects.js), for in-app links and `npm run dev`.
-const LegacyInvestorRedirect = () => {
+const LegacyRedirect = () => {
   const location = useLocation();
   const target = legacyRedirect(location.pathname) || '/investors/corporate-governance';
   return <Navigate to={target + location.search} replace />;
+};
+
+// The live nurengroup.com has an /enquiry page; here enquiries go through the
+// Contact Us window, so /enquiry opens it over the home page.
+const EnquiryRedirect = ({ onContactClick }: { onContactClick: () => void }) => {
+  const navigate = useNavigate();
+  useEffect(() => {
+    navigate('/home', { replace: true });
+    onContactClick();
+  }, []);
+  return null;
+};
+
+// The investor pages carry the investor site's footer (as on nurengroup.com).
+const SiteFooter = ({ onContactClick }: { onContactClick: () => void }) => {
+  const { pathname } = useLocation();
+  return usesInvestorFooter(pathname) ? <InvestorFooter onContactClick={onContactClick} /> : <Footer />;
 };
 
 // --- Main App ---
@@ -2114,18 +2133,21 @@ export default function App() {
                     <Route path="/investors/prospectus" element={<ProspectusPage />} />
                     <Route path="/investors/prospectus/preview" element={<ProspectusPreviewPage />} />
                     <Route path="/pdf-viewer" element={<PdfViewerPage />} />
-                    <Route path="/investors" element={<LegacyInvestorRedirect />} />
-                    <Route path="/investors/companyinformation" element={<LegacyInvestorRedirect />} />
-                    <Route path="/investors/company-information" element={<LegacyInvestorRedirect />} />
-                    <Route path="/investors/finance-reports" element={<LegacyInvestorRedirect />} />
-                    <Route path="/investors/governance-documents" element={<LegacyInvestorRedirect />} />
-                    <Route path="/investors/governance-documents/:docId" element={<LegacyInvestorRedirect />} />
+                    <Route path="/investors" element={<LegacyRedirect />} />
+                    <Route path="/investors/companyinformation" element={<LegacyRedirect />} />
+                    <Route path="/investors/company-information" element={<LegacyRedirect />} />
+                    <Route path="/investors/finance-reports" element={<LegacyRedirect />} />
+                    <Route path="/investors/governance-documents" element={<LegacyRedirect />} />
+                    <Route path="/investors/governance-documents/:docId" element={<LegacyRedirect />} />
+                    <Route path="/mediahub" element={<LegacyRedirect />} />
+                    <Route path="/brands/our-brands" element={<LegacyRedirect />} />
+                    <Route path="/enquiry" element={<EnquiryRedirect onContactClick={() => setIsContactModalOpen(true)} />} />
                     <Route path="/board-of-directors" element={<BoardOfDirectorsPage />} />
                     <Route path="/careers" element={<CareersPage />} />
                   </Routes>
                 </main>
 
-                <Footer />
+                <SiteFooter onContactClick={() => setIsContactModalOpen(true)} />
 
                 <ContactModal
                   isOpen={isContactModalOpen}

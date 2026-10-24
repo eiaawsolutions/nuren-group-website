@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { SEO, SITE_URL } from '../SEO';
 import { pdfEmbedSrc } from './pdfSrc';
+import { CitiesSkyline } from './InvestorLayout';
 import './investors.css';
 
 /**
@@ -38,6 +39,7 @@ export function InlinePdfViewer({ src, title = 'Document viewer' }: { src: strin
           <p className="ir-pv-fallback">Document not found.</p>
         )}
       </div>
+      <CitiesSkyline />
     </div>
   );
 }

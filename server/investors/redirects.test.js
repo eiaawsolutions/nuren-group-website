@@ -40,6 +40,11 @@ describe('legacyRedirect', () => {
     for (const slug of Object.values(LEGACY_GOVERNANCE_SLUGS)) expect(slugs.has(slug), slug).toBe(true);
   });
 
+  it('sends the live nurengroup.com paths the investor footer links to to this site’s pages', () => {
+    expect(legacyRedirect('/mediahub')).toBe('/media-hub');
+    expect(legacyRedirect('/brands/our-brands')).toBe('/products');
+  });
+
   it('sends an unknown old document id to the governance list', () => {
     expect(legacyRedirect('/investors/governance-documents/nope')).toBe('/investors/corporate-governance');
   });

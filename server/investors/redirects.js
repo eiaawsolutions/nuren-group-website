@@ -1,7 +1,8 @@
-// Permanent redirects for investor URLs that moved when this site took over
-// the Nuren investor site's pages. Two sources of old links:
+// Permanent redirects for URLs that moved when this site took over the Nuren
+// investor site's pages. Three sources of old links:
 //   - the investor site's own next.config redirects (company-information etc.)
-//   - this site's previous investor hub and governance-documents pages.
+//   - this site's previous investor hub and governance-documents pages
+//   - live nurengroup.com pages this site has under another path.
 // Shared with the React router so client-side navigation lands in the same
 // place as the server's 301. No Node imports: the browser bundles this file.
 
@@ -30,6 +31,10 @@ const EXACT = {
   '/investors/company-information': '/investors/company',
   '/investors/finance-reports': '/investors/reports',
   '/investors/governance-documents': GOVERNANCE,
+  // The live nurengroup.com (the investor site's codebase) has these pages
+  // under other paths; its investor footer links to them.
+  '/mediahub': '/media-hub',
+  '/brands/our-brands': '/products',
 };
 
 const OLD_DOC_PREFIX = '/investors/governance-documents/';
