@@ -4,14 +4,14 @@
 // beside it, under INVESTOR_DATA_DIR. Point that at the Railway volume (the
 // same one the leads use) so admin edits survive deploys.
 //
-// On first boot each collection is seeded from the repo's seed JSON. Writes go
-// to a temp file and are renamed into place, so a crash mid-write never leaves
-// a half-written file. Writes are synchronous, which also keeps two admin saves
+// On first boot each collection is seeded from the repo's seed JSON. Writes are
+// atomic (../json-file.js) and synchronous, which also keeps two admin saves
 // from interleaving. If the disk is not writable the store keeps working in
 // memory (lost on restart), and `writable` says so for the admin warning.
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
+import { readJsonFile, writeJsonAtomic } from '../json-file.js';
 import { COLLECTIONS, SLUG_MAX, byReleaseDate, slugify } from './validate.js';
 
 export const UPLOAD_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
@@ -32,28 +32,15 @@ export function createInvestorStore({ dir, seeds, onError = () => {} }) {
 
   function writeJson(name, data) {
     if (!writable) return;
-    const target = path.join(dir, name);
-    const tmp = `${target}.${process.pid}.tmp`;
     try {
-      fs.writeFileSync(tmp, `${JSON.stringify(data, null, 2)}\n`);
-      fs.renameSync(tmp, target);
+      writeJsonAtomic(path.join(dir, name), data);
     } catch (err) {
       onError('investors:write', err?.message || err);
     }
   }
 
-  function readJson(name, fallback) {
-    const target = path.join(dir, name);
-    if (!fs.existsSync(target)) return { data: fallback, fresh: true };
-    try {
-      return { data: JSON.parse(fs.readFileSync(target, 'utf8')), fresh: false };
-    } catch (err) {
-      // Keep the unreadable file for recovery instead of overwriting it.
-      onError('investors:corrupt', `${name}: ${err?.message || err}`);
-      fs.renameSync(target, `${target}.corrupt-${Date.now()}`);
-      return { data: fallback, fresh: true };
-    }
-  }
+  const readJson = (name, fallback) =>
+    readJsonFile(path.join(dir, name), fallback, (detail) => onError('investors:corrupt', `${name}: ${detail}`));
 
   try {
     fs.mkdirSync(uploadsPath, { recursive: true });
