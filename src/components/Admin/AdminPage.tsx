@@ -1,6 +1,10 @@
 import { useState, useEffect, FormEvent } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { LeadsPanel, type Lead } from './LeadsPanel';
+import { InvestorRecordsPanel } from './InvestorRecordsPanel';
+
+type Tab = 'overview' | 'kb' | 'leads' | 'announcements' | 'reports' | 'errors';
+const TABS: Tab[] = ['overview', 'kb', 'leads', 'announcements', 'reports', 'errors'];
 
 interface Status {
   settings: {
@@ -9,6 +13,7 @@ interface Status {
     enquiryFromEmail: string;
     enquiryRecipient: string;
     leadStorage: { persistent: boolean; writable: boolean; dir: string };
+    investorStorage: { persistent: boolean; writable: boolean; dir: string };
     chatModel: string;
     chatModelKey: string;
     chatEffort: string | null;
@@ -65,7 +70,7 @@ export function AdminPage() {
   const [status, setStatus] = useState<Status | null>(null);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [errors, setErrors] = useState<ErrorEntry[]>([]);
-  const [tab, setTab] = useState<'overview' | 'kb' | 'leads' | 'errors'>('overview');
+  const [tab, setTab] = useState<Tab>('overview');
   const [testAnthropicResult, setTestAnthropicResult] = useState<string>('');
   const [testEnquiryResult, setTestEnquiryResult] = useState<string>('');
   const [refreshing, setRefreshing] = useState(false);
@@ -212,7 +217,7 @@ export function AdminPage() {
           </div>
         </div>
         <div className="max-w-6xl mx-auto px-6 flex gap-1 -mb-px">
-          {(['overview', 'kb', 'leads', 'errors'] as const).map((t) => (
+          {TABS.map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -223,6 +228,8 @@ export function AdminPage() {
               {t === 'overview' && 'Overview'}
               {t === 'kb' && 'Knowledge base'}
               {t === 'leads' && `Leads (${leads.length})`}
+              {t === 'announcements' && 'Announcements'}
+              {t === 'reports' && 'Finance Reports'}
               {t === 'errors' && `Errors (${errors.length})`}
             </button>
           ))}
@@ -346,6 +353,14 @@ export function AdminPage() {
         )}
 
         {tab === 'leads' && <LeadsPanel leads={leads} storage={status.settings.leadStorage} authHeader={authHeader(password)} />}
+
+        {tab === 'announcements' && (
+          <InvestorRecordsPanel collection="announcements" storage={status.settings.investorStorage} authHeader={authHeader(password)} />
+        )}
+
+        {tab === 'reports' && (
+          <InvestorRecordsPanel collection="financial-reports" storage={status.settings.investorStorage} authHeader={authHeader(password)} />
+        )}
 
         {tab === 'errors' && (
           <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">

@@ -11,6 +11,10 @@ export const COLLECTIONS = {
 
 export const REPORT_TYPES = ['file', 'link'];
 
+// Admin uploads: documents only, as on the investor site.
+export const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
+export const UPLOAD_EXTENSIONS = ['pdf', 'doc', 'docx'];
+
 export const FIELD_LIMITS = {
   code: 20,
   category: 120,

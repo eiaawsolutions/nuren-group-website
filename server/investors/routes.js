@@ -5,13 +5,11 @@
 // site's forgeable `nurengroup_admin=true` cookie.
 import express from 'express';
 import { ATTACHMENT_TYPES, safeFilename } from '../leads/attachment.js';
-import { COLLECTIONS, validateRecord } from './validate.js';
+import { COLLECTIONS, MAX_UPLOAD_BYTES, UPLOAD_EXTENSIONS, validateRecord } from './validate.js';
 
-export const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
+export { MAX_UPLOAD_BYTES };
 
-// Documents only, as on the investor site. PDFs open in the inline viewer;
-// Word files can't render in a browser, so they download.
-const UPLOAD_TYPES = ['pdf', 'doc', 'docx'];
+// PDFs open in the inline viewer; Word files can't render in a browser, so they download.
 const INLINE_TYPES = new Set(['application/pdf']);
 
 // The site-wide CSP says frame-ancestors 'none'. A PDF the viewer page shows
@@ -76,7 +74,7 @@ function checkUpload(req) {
     return { error: 'The file name could not be read.' };
   }
   const ext = (name.split('.').pop() || '').toLowerCase();
-  if (!UPLOAD_TYPES.includes(ext)) return { error: 'Upload a PDF, DOC or DOCX file.' };
+  if (!UPLOAD_EXTENSIONS.includes(ext)) return { error: 'Upload a PDF, DOC or DOCX file.' };
   const buffer = Buffer.isBuffer(req.body) ? req.body : Buffer.alloc(0);
   if (buffer.length === 0) return { error: 'The file is empty.' };
   const type = ATTACHMENT_TYPES[ext];
