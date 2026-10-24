@@ -1,0 +1,9 @@
+# Railway build image (Nixpacks). "..." keeps the packages Nixpacks already
+# adds for Puppeteer (Chromium's shared libraries).
+#
+# unzip: @puppeteer/browsers 3.x (Puppeteer 25+) unpacks Chrome for Testing
+# with the system `unzip` instead of a bundled library. Without it the Chrome
+# download in `npm ci` fails silently (Puppeteer only warns) and the prerender
+# step then stops the build with "Could not find Chrome".
+[phases.setup]
+aptPkgs = ["...", "unzip"]
