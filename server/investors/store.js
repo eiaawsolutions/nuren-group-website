@@ -12,7 +12,7 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import { COLLECTIONS } from './validate.js';
+import { COLLECTIONS, byReleaseDate } from './validate.js';
 
 export const UPLOAD_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
@@ -20,12 +20,6 @@ const UPLOADS_DIR = 'uploads';
 const UPLOADS_INDEX = 'uploads.json';
 
 const fileFor = (collection) => `${collection}.json`;
-
-/** Newest first; rows released in the same second keep the order the NSX listed them. */
-function byReleaseDate(a, b) {
-  if (a.date !== b.date) return a.date < b.date ? 1 : -1;
-  return (a.sortOrder ?? Number.MAX_SAFE_INTEGER) - (b.sortOrder ?? Number.MAX_SAFE_INTEGER);
-}
 
 export function createInvestorStore({ dir, seeds, onError = () => {} }) {
   const uploadsPath = path.join(dir, UPLOADS_DIR);

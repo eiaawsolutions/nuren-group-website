@@ -7,13 +7,15 @@ export const SITE_URL = 'https://nurengroup.com';
 // fallback — most platforms will crop/letterbox to fit.
 const DEFAULT_OG = `${SITE_URL}/NurenGroup.jpg`;
 
-export const SEO = ({ title, description, keywords, canonical, ogImage, breadcrumbs }: {
+export const SEO = ({ title, description, keywords, canonical, ogImage, breadcrumbs, noindex = false }: {
   title: string,
   description: string,
   keywords?: string,
   canonical?: string,
   ogImage?: string,
   breadcrumbs?: Breadcrumb[],
+  // For utility pages (e.g. the PDF viewer) whose content lives elsewhere.
+  noindex?: boolean,
 }) => {
   const canonicalUrl = canonical || `${SITE_URL}/`;
   const image = ogImage || DEFAULT_OG;
@@ -36,6 +38,7 @@ export const SEO = ({ title, description, keywords, canonical, ogImage, breadcru
       <title>{title}</title>
       <meta name="description" content={description} />
       {keywords && <meta name="keywords" content={keywords} />}
+      {noindex && <meta name="robots" content="noindex, follow" />}
       <link rel="canonical" href={canonicalUrl} />
 
       {/* hreflang — same English content serves MY (primary), SG, and the

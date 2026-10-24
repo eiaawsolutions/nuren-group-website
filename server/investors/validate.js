@@ -29,6 +29,15 @@ const DATE_RE = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/;
 const oneLine = (value, max) => String(value ?? '').replace(/[\r\n]+/g, ' ').trim().slice(0, max);
 
 /**
+ * Display order for the public tables and the admin: newest first; rows
+ * released in the same second keep the order the NSX listed them in.
+ */
+export function byReleaseDate(a, b) {
+  if (a.date !== b.date) return a.date < b.date ? 1 : -1;
+  return (a.sortOrder ?? Number.MAX_SAFE_INTEGER) - (b.sortOrder ?? Number.MAX_SAFE_INTEGER);
+}
+
+/**
  * Where a record's link may point: a self-hosted PDF, a file uploaded through
  * the admin, or an https page (e.g. a Drive link). Anything else, including
  * `javascript:` and relative paths elsewhere on the site, is refused because

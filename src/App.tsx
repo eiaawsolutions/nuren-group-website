@@ -1,8 +1,18 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { BrowserRouter, Routes, Route, Link, useLocation, useParams } from 'react-router-dom';
-import { Helmet, HelmetProvider } from 'react-helmet-async';
-import { governanceDocs } from './data/governanceDocs';
+import { BrowserRouter, Routes, Route, Link, Navigate, useLocation } from 'react-router-dom';
+import { HelmetProvider } from 'react-helmet-async';
+import { legacyRedirect } from '../server/investors/redirects.js';
+import {
+  CompanyInformationPage,
+  CorporateGovernancePage,
+  GovernanceDocPage,
+  AnnouncementsPage,
+  FinancialReportsPage,
+  ProspectusPage,
+  ProspectusPreviewPage,
+  PdfViewerPage,
+} from './components/Investors';
 import { Chatbot } from './components/Chatbot/Chatbot';
 import { ContactModal } from './components/Enquiry/ContactModal';
 import { AdminPage } from './components/Admin/AdminPage';
@@ -26,12 +36,8 @@ import {
   ShieldCheck,
   Newspaper,
   Play,
-  FileText,
-  Info,
-  Gavel,
   Megaphone,
   Youtube,
-  Instagram,
   Mic,
   BookOpen,
   Layers,
@@ -131,18 +137,30 @@ const Navbar = ({ onContactClick }: { onContactClick: () => void }) => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const navLinks = [
+  const navLinks: { name: string; href: string; children?: { name: string; href: string }[] }[] = [
     { name: 'Home', href: '/home' },
     { name: 'Ecosystem', href: '/ecosystem' },
     { name: 'Products', href: '/products' },
     { name: 'For Brands', href: '/home#brands' },
-    { name: 'Investors', href: '/investors' },
+    // Same submenu as the Nuren investor site; the parent opens Corporate Governance there too.
+    {
+      name: 'Investors',
+      href: '/investors/corporate-governance',
+      children: [
+        { name: 'Company Information', href: '/investors/company' },
+        { name: 'Corporate Governance', href: '/investors/corporate-governance' },
+        { name: 'Announcements', href: '/investors/announcements' },
+        { name: 'Finance Reports', href: '/investors/reports' },
+      ],
+    },
     { name: 'Careers', href: '/careers' },
   ];
 
   // Transparent navbar at top while on the home page; solid otherwise.
   // The cinematic landing at "/" doesn't render the navbar at all (separate route).
   const isHome = location.pathname === '/home';
+  const isActive = (link: { href: string; children?: unknown[] }) =>
+    link.children ? location.pathname.startsWith('/investors') : location.pathname === link.href;
 
   return (
     <nav className={`fixed top-9 left-0 right-0 z-50 transition-all duration-300 ${isScrolled || !isHome ? 'bg-white/90 backdrop-blur-md shadow-sm py-3' : 'bg-transparent py-5'}`}>
@@ -162,17 +180,43 @@ const Navbar = ({ onContactClick }: { onContactClick: () => void }) => {
               >
                 {link.name}
               </a>
+            ) : link.children ? (
+              // Opens on hover and on keyboard focus (focus-within), so tabbing
+              // through the menu reaches every investor page.
+              <div key={link.name} className="relative group">
+                <Link
+                  to={link.href}
+                  className={`text-sm font-medium transition-colors inline-flex items-center gap-1 ${isActive(link) ? 'text-nuren-pink' : 'text-slate-600 hover:text-nuren-pink'}`}
+                >
+                  {link.name}
+                  <ChevronRight size={14} className="rotate-90" aria-hidden="true" />
+                </Link>
+                <div className="absolute left-1/2 top-full -translate-x-1/2 pt-3 hidden group-hover:block group-focus-within:block">
+                  <ul className="min-w-56 rounded-xl bg-white shadow-xl ring-1 ring-slate-100 py-2">
+                    {link.children.map((child) => (
+                      <li key={child.href}>
+                        <Link
+                          to={child.href}
+                          className={`block px-4 py-2 text-sm transition-colors ${location.pathname === child.href ? 'text-nuren-pink' : 'text-slate-600 hover:text-nuren-pink hover:bg-slate-50'}`}
+                        >
+                          {child.name}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
             ) : (
-              <Link 
-                key={link.name} 
-                to={link.href} 
-                className={`text-sm font-medium transition-colors ${location.pathname === link.href ? 'text-nuren-pink' : 'text-slate-600 hover:text-nuren-pink'}`}
+              <Link
+                key={link.name}
+                to={link.href}
+                className={`text-sm font-medium transition-colors ${isActive(link) ? 'text-nuren-pink' : 'text-slate-600 hover:text-nuren-pink'}`}
               >
                 {link.name}
               </Link>
             )
           ))}
-          <button 
+          <button
             onClick={onContactClick}
             className="bg-nuren-pink text-white px-5 py-2 rounded-full text-sm font-semibold hover:bg-nuren-pink/90 transition-all shadow-lg shadow-nuren-pink/20"
           >
@@ -212,14 +256,29 @@ const Navbar = ({ onContactClick }: { onContactClick: () => void }) => {
                     {link.name}
                   </a>
                 ) : (
-                  <Link 
-                    key={link.name} 
-                    to={link.href} 
-                    className={`text-lg font-medium ${location.pathname === link.href ? 'text-nuren-pink' : 'text-slate-700'}`}
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    {link.name}
-                  </Link>
+                  <div key={link.name} className="flex flex-col gap-3">
+                    <Link
+                      to={link.href}
+                      className={`text-lg font-medium ${isActive(link) ? 'text-nuren-pink' : 'text-slate-700'}`}
+                      onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                      {link.name}
+                    </Link>
+                    {link.children && (
+                      <div className="flex flex-col gap-3 pl-4 border-l-2 border-slate-100">
+                        {link.children.map((child) => (
+                          <Link
+                            key={child.href}
+                            to={child.href}
+                            className={`text-base ${location.pathname === child.href ? 'text-nuren-pink' : 'text-slate-500'}`}
+                            onClick={() => setIsMobileMenuOpen(false)}
+                          >
+                            {child.name}
+                          </Link>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 )
               ))}
               <button 
@@ -797,79 +856,6 @@ const Newsroom = () => {
   );
 };
 
-const Investors = () => {
-  const investorLinks = [
-    { 
-      title: 'Company Information', 
-      desc: 'Detailed directory and market data on NSX.', 
-      link: 'https://www.nsx.com.au/marketdata/company-directory/details/NRN/',
-      icon: <Info className="text-blue-600" />
-    },
-    { 
-      title: 'Corporate Governance', 
-      desc: 'Our commitment to transparency and ethical business practices.', 
-      link: '/investors/corporate-governance',
-      icon: <Gavel className="text-purple-600" />
-    },
-    { 
-      title: 'Announcements', 
-      desc: 'Latest market announcements and regulatory filings.', 
-      link: 'https://www.nsx.com.au/marketdata/company-directory/announcements/NRN/',
-      icon: <Megaphone className="text-orange-600" />
-    },
-    { 
-      title: 'Financial Reports', 
-      desc: 'Annual and periodic financial performance reports.', 
-      link: 'https://www.nsx.com.au/marketdata/company-directory/announcements/NRN/',
-      icon: <FileText className="text-emerald-600" />
-    },
-    { 
-      title: 'Board of Directors', 
-      desc: 'Meet the experienced leaders guiding Nuren Group strategy.', 
-      link: '/board-of-directors',
-      icon: <Users className="text-pink-600" />
-    }
-  ];
-
-  return (
-    <section id="investors" className="py-24">
-      <div className="max-w-7xl mx-auto px-6">
-        <div className="text-center mb-16">
-          <h2 className="text-4xl font-bold text-slate-900 mb-4">Investor Relations</h2>
-          <p className="text-slate-600 max-w-2xl mx-auto text-lg">
-            Access key information about Nuren Group's performance, governance, and market announcements.
-          </p>
-        </div>
-
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {investorLinks.map((item, idx) => (
-            <motion.a 
-              key={idx}
-              href={item.link}
-              target="_blank"
-              rel="noopener noreferrer"
-              whileHover={{ y: -5 }}
-              className="bg-white p-8 rounded-[32px] border border-slate-100 shadow-sm hover:shadow-xl hover:border-nuren-pink/20 transition-all group"
-            >
-              <div className="w-14 h-14 bg-slate-50 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                {item.icon}
-              </div>
-              <h3 className="text-xl font-bold text-slate-900 mb-3 group-hover:text-nuren-pink transition-colors">{item.title}</h3>
-              <p className="text-slate-500 text-sm leading-relaxed mb-6">
-                {item.desc}
-              </p>
-              <div className="flex items-center gap-2 text-nuren-pink font-bold text-sm">
-                Learn More
-                <ExternalLink size={14} />
-              </div>
-            </motion.a>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-};
-
 const QuickLinks = () => {
   return (
     <section className="py-12 bg-slate-900 text-white/60 border-b border-white/5">
@@ -879,7 +865,7 @@ const QuickLinks = () => {
           <a href="https://nurengroup.com/home" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Nuren Home</a>
           <a href="#products" className="hover:text-white transition-colors">Our Products</a>
           <Link to="/media-hub" className="hover:text-white transition-colors">Media Hub</Link>
-          <Link to="/investors" className="hover:text-white transition-colors">Investors</Link>
+          <Link to="/investors/corporate-governance" className="hover:text-white transition-colors">Investors</Link>
           <a href="#vision" className="hover:text-white transition-colors">Our Vision</a>
         </div>
       </div>
@@ -1101,97 +1087,6 @@ const ClientLogos = () => {
   );
 };
 
-const BoardOfDirectors = () => {
-  return (
-    <section id="board" className="py-24 bg-slate-50">
-      <div className="max-w-7xl mx-auto px-6">
-        <div className="grid lg:grid-cols-2 gap-16 items-center">
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
-          >
-            <h2 className="text-4xl font-bold text-slate-900 mb-6">Board of Directors</h2>
-            <p className="text-lg text-slate-600 mb-8 leading-relaxed">
-              Our Board of Directors comprises seasoned professionals with diverse backgrounds in technology, finance, and healthcare. They provide strategic oversight and guidance to ensure Nuren Group continues to lead the digital family ecosystem in Southeast Asia.
-            </p>
-            <div className="flex flex-col gap-4 mb-8">
-              <div className="flex items-start gap-4">
-                <div className="w-10 h-10 bg-nuren-pink/10 rounded-full flex items-center justify-center text-nuren-pink shrink-0">
-                  <CheckCircle2 size={20} />
-                </div>
-                <div>
-                  <h4 className="font-bold text-slate-900">Strategic Governance</h4>
-                  <p className="text-slate-500 text-sm">Ensuring long-term value for all stakeholders.</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-4">
-                <div className="w-10 h-10 bg-nuren-pink/10 rounded-full flex items-center justify-center text-nuren-pink shrink-0">
-                  <Globe size={20} />
-                </div>
-                <div>
-                  <h4 className="font-bold text-slate-900">Regional Expertise</h4>
-                  <p className="text-slate-500 text-sm">Deep understanding of the SEA market landscape.</p>
-                </div>
-              </div>
-            </div>
-            <a 
-              href="/board-of-directors" 
-              className="inline-flex items-center gap-2 bg-slate-900 text-white px-8 py-4 rounded-full font-bold hover:bg-slate-800 transition-all shadow-lg"
-            >
-              View Full Board
-              <ArrowRight size={20} />
-            </a>
-          </motion.div>
-          
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            whileInView={{ opacity: 1, scale: 1 }}
-            viewport={{ once: true }}
-            className="relative"
-          >
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-4">
-                <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
-                  <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600 mb-4">
-                    <Info size={24} />
-                  </div>
-                  <h4 className="font-bold text-slate-900">Market Insight</h4>
-                  <p className="text-xs text-slate-500">Public market experience on NSX & beyond.</p>
-                </div>
-                <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
-                  <div className="w-12 h-12 bg-purple-50 rounded-2xl flex items-center justify-center text-purple-600 mb-4">
-                    <Gavel size={24} />
-                  </div>
-                  <h4 className="font-bold text-slate-900">Compliance</h4>
-                  <p className="text-xs text-slate-500">Adhering to the highest ethical standards.</p>
-                </div>
-              </div>
-              <div className="space-y-4 pt-8">
-                <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
-                  <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-600 mb-4">
-                    <FileText size={24} />
-                  </div>
-                  <h4 className="font-bold text-slate-900">Reporting</h4>
-                  <p className="text-xs text-slate-500">Transparent financial and operational reporting.</p>
-                </div>
-                <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
-                  <div className="w-12 h-12 bg-orange-50 rounded-2xl flex items-center justify-center text-orange-600 mb-4">
-                    <Megaphone size={24} />
-                  </div>
-                  <h4 className="font-bold text-slate-900">Communication</h4>
-                  <p className="text-xs text-slate-500">Open dialogue with our investor community.</p>
-                </div>
-              </div>
-            </div>
-            <div className="absolute -z-10 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-nuren-pink/5 rounded-full blur-3xl" />
-          </motion.div>
-        </div>
-      </div>
-    </section>
-  );
-};
-
 const VisionSection = () => {
   return (
     <section id="vision" className="py-24">
@@ -1283,7 +1178,8 @@ const Footer = () => {
             <h4 className="font-bold text-slate-900 mb-6">Company</h4>
             <ul className="space-y-4 text-slate-500">
               <li><a href="#" className="hover:text-nuren-pink transition-colors">About Us</a></li>
-              <li><Link to="/investors" className="hover:text-nuren-pink transition-colors">Investors</Link></li>
+              <li><Link to="/investors/corporate-governance" className="hover:text-nuren-pink transition-colors">Investors</Link></li>
+              <li><Link to="/board-of-directors" className="hover:text-nuren-pink transition-colors">Board of Directors</Link></li>
               <li><Link to="/careers" className="hover:text-nuren-pink transition-colors">Careers</Link></li>
               <li><Link to="/media-hub" className="hover:text-nuren-pink transition-colors">Media Hub</Link></li>
               <li><a href="#" className="hover:text-nuren-pink transition-colors">Contact</a></li>
@@ -1650,420 +1546,6 @@ const BoardOfDirectorsPage = () => {
               <h4 className="font-bold mb-2">Transparency</h4>
               <p className="text-sm text-slate-500">Clear and open communication with stakeholders.</p>
             </div>
-          </div>
-        </div>
-      </section>
-    </div>
-  );
-};
-
-// --- Investors Page ---
-
-// --- Corporate Governance Page ---
-
-const CorporateGovernancePage = () => {
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, []);
-
-  const principles = [
-    {
-      title: "Integrity & Ethics",
-      desc: "We maintain the highest standards of integrity in all our dealings, ensuring ethical conduct across every level of the organization.",
-      icon: <ShieldCheck className="text-nuren-pink" size={32} />
-    },
-    {
-      title: "Transparency",
-      desc: "We are committed to clear, accurate, and timely disclosure of information to our shareholders and the public.",
-      icon: <BarChart3 className="text-blue-500" size={32} />
-    },
-    {
-      title: "Accountability",
-      desc: "Our board and management are accountable for the company's performance and for protecting the interests of all stakeholders.",
-      icon: <Gavel className="text-purple-600" size={32} />
-    }
-  ];
-
-  const committees = [
-    {
-      name: "Audit Committee",
-      desc: "Oversees financial reporting, internal controls, and the external audit process to ensure financial integrity."
-    },
-    {
-      name: "Remuneration Committee",
-      desc: "Ensures that executive compensation is fair, competitive, and aligned with the long-term interests of the company."
-    },
-    {
-      name: "Nomination Committee",
-      desc: "Responsible for board composition, succession planning, and ensuring a diverse and capable leadership team."
-    }
-  ];
-
-  return (
-    <div className="pt-20">
-      <SEO
-        title="Corporate Governance | Nuren Group - Ethics & Transparency"
-        description="Learn about Nuren Group's commitment to corporate governance, ethical business practices, and transparency."
-        keywords="corporate governance, business ethics, transparency, Nuren Group policies"
-        canonical="https://nurengroup.com/investors/corporate-governance"
-        breadcrumbs={[
-          { name: 'Home', url: '/home' },
-          { name: 'Investors', url: '/investors' },
-          { name: 'Corporate Governance', url: '/investors/corporate-governance' },
-        ]}
-      />
-
-      {/* Hero Section */}
-      <section className="py-24 bg-slate-900 text-white overflow-hidden relative">
-        <div className="absolute top-0 right-0 w-full h-full opacity-10 pointer-events-none">
-          <svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none">
-            <path d="M0 100 C 20 0 50 0 100 100" stroke="white" fill="transparent" strokeWidth="0.5" />
-          </svg>
-        </div>
-        <div className="max-w-7xl mx-auto px-6 relative z-10 text-center">
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="inline-block px-4 py-2 bg-nuren-pink/20 text-nuren-pink rounded-full text-sm font-bold mb-6 border border-nuren-pink/30"
-          >
-            Governance
-          </motion.div>
-          <motion.h1 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="text-5xl md:text-7xl font-bold mb-8"
-          >
-            Corporate <span className="text-nuren-pink">Governance</span>
-          </motion.h1>
-          <motion.p 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="text-xl text-slate-400 max-w-3xl mx-auto leading-relaxed"
-          >
-            Nuren Group is committed to the highest standards of corporate governance, ensuring transparency, accountability, and ethical business practices.
-          </motion.p>
-        </div>
-      </section>
-
-      {/* Core Principles */}
-      <section className="py-24">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-slate-900 mb-4">Our Core Principles</h2>
-            <p className="text-slate-600 max-w-2xl mx-auto text-lg">
-              These principles guide our decision-making and ensure we build long-term value for our stakeholders.
-            </p>
-          </div>
-          <div className="grid md:grid-cols-3 gap-12">
-            {principles.map((principle, idx) => (
-              <motion.div 
-                key={idx}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: idx * 0.1 }}
-                className="p-10 rounded-[40px] bg-white border border-slate-100 shadow-xl shadow-slate-200/50 hover:shadow-2xl transition-all"
-              >
-                <div className="w-16 h-16 rounded-2xl bg-slate-50 flex items-center justify-center mb-8">
-                  {principle.icon}
-                </div>
-                <h3 className="text-2xl font-bold text-slate-900 mb-4">{principle.title}</h3>
-                <p className="text-slate-600 leading-relaxed">
-                  {principle.desc}
-                </p>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Board Committees */}
-      <section className="py-24 bg-slate-50">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="grid lg:grid-cols-2 gap-16 items-center">
-            <div>
-              <h2 className="text-4xl font-bold text-slate-900 mb-6">Board Committees</h2>
-              <p className="text-lg text-slate-600 mb-10 leading-relaxed">
-                Our board committees play a vital role in ensuring that specific areas of governance are handled with the necessary expertise and focus.
-              </p>
-              <div className="space-y-6">
-                {committees.map((committee, idx) => (
-                  <motion.div 
-                    key={idx}
-                    initial={{ opacity: 0, x: -20 }}
-                    whileInView={{ opacity: 1, x: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ delay: idx * 0.1 }}
-                    className="p-6 bg-white rounded-3xl border border-slate-100 shadow-sm"
-                  >
-                    <h4 className="font-bold text-slate-900 mb-2">{committee.name}</h4>
-                    <p className="text-slate-500 text-sm">{committee.desc}</p>
-                  </motion.div>
-                ))}
-              </div>
-            </div>
-            <div className="relative">
-              <div className="aspect-square rounded-[64px] overflow-hidden shadow-2xl">
-                <img
-                  src="https://picsum.photos/seed/governance/800/800"
-                  alt="Governance"
-                  className="w-full h-full object-cover"
-                  loading="lazy"
-                  decoding="async"
-                  referrerPolicy="no-referrer"
-                />
-              </div>
-              <div className="absolute -bottom-8 -left-8 bg-nuren-pink text-white p-8 rounded-[32px] shadow-xl max-w-xs">
-                <p className="text-lg font-bold">"Governance is not just about compliance; it's about building trust."</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Policies & Documents */}
-      <section className="py-24">
-        <div className="max-w-5xl mx-auto px-6 text-center">
-          <h2 className="text-4xl font-bold text-slate-900 mb-8">Policies & Disclosures</h2>
-          <p className="text-lg text-slate-600 leading-relaxed mb-12">
-            We maintain a comprehensive set of policies to ensure that our operations are conducted ethically and in compliance with all applicable laws and regulations.
-          </p>
-          <div className="grid md:grid-cols-2 gap-6">
-            {governanceDocs.slice(0, 6).map((doc, idx) => (
-              <Link 
-                key={idx} 
-                to={`/investors/governance-documents/${doc.id}`}
-                className="flex items-center justify-between p-6 bg-slate-50 rounded-2xl hover:bg-slate-100 transition-colors cursor-pointer group"
-              >
-                <div className="flex items-center gap-4">
-                  <FileText className="text-slate-400 group-hover:text-nuren-pink transition-colors" size={24} />
-                  <span className="font-bold text-slate-700">{doc.title}</span>
-                </div>
-                <ArrowRight className="text-slate-300 group-hover:text-nuren-pink transition-all group-hover:translate-x-1" size={20} />
-              </Link>
-            ))}
-          </div>
-          <div className="mt-12">
-            <Link 
-              to="/investors/governance-documents" 
-              className="inline-flex items-center gap-2 text-nuren-pink font-bold hover:gap-3 transition-all"
-            >
-              View All Governance Documents
-              <ArrowRight size={20} />
-            </Link>
-          </div>
-        </div>
-      </section>
-    </div>
-  );
-};
-
-// --- Governance Documents Page ---
-
-const GovernanceDocumentsPage = () => {
-  const { docId } = useParams();
-  const [selectedDoc, setSelectedDoc] = useState(governanceDocs[0]);
-
-  useEffect(() => {
-    window.scrollTo(0, 0);
-    if (docId) {
-      const doc = governanceDocs.find(d => d.id === docId);
-      if (doc) setSelectedDoc(doc);
-    }
-  }, [docId]);
-
-  return (
-    <div className="pt-20">
-      <SEO
-        title={`${selectedDoc.title} | Governance Documents | Nuren Group`}
-        description={`Read the ${selectedDoc.title} and other governance documents of Nuren Group.`}
-        keywords={`governance documents, ${selectedDoc.title}, Nuren Group policies`}
-        canonical={`https://nurengroup.com/investors/governance-documents/${selectedDoc.id}`}
-        breadcrumbs={[
-          { name: 'Home', url: '/home' },
-          { name: 'Investors', url: '/investors' },
-          { name: 'Governance Documents', url: '/investors/governance-documents' },
-          { name: selectedDoc.title, url: `/investors/governance-documents/${selectedDoc.id}` },
-        ]}
-      />
-
-      <section className="py-16 bg-slate-50 border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-6">
-          <Link to="/investors/corporate-governance" className="inline-flex items-center gap-2 text-slate-500 hover:text-nuren-pink mb-8 transition-colors">
-            <ChevronRight className="rotate-180" size={20} />
-            Back to Corporate Governance
-          </Link>
-          <h1 className="text-4xl font-bold text-slate-900">Governance Documents</h1>
-        </div>
-      </section>
-
-      <section className="py-12">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="grid lg:grid-cols-4 gap-12">
-            {/* Sidebar */}
-            <div className="lg:col-span-1">
-              <div className="sticky top-32 space-y-8">
-                <div>
-                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Committee Charters</h3>
-                  <div className="space-y-1">
-                    {governanceDocs.filter(d => d.category === 'Charter').map(doc => (
-                      <button
-                        key={doc.id}
-                        onClick={() => setSelectedDoc(doc)}
-                        className={`w-full text-left px-4 py-2 rounded-xl text-sm font-medium transition-all ${selectedDoc.id === doc.id ? 'bg-nuren-pink text-white shadow-lg shadow-nuren-pink/20' : 'text-slate-600 hover:bg-slate-100'}`}
-                      >
-                        {doc.title}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Corporate Policies</h3>
-                  <div className="space-y-1">
-                    {governanceDocs.filter(d => d.category === 'Policy').map(doc => (
-                      <button
-                        key={doc.id}
-                        onClick={() => setSelectedDoc(doc)}
-                        className={`w-full text-left px-4 py-2 rounded-xl text-sm font-medium transition-all ${selectedDoc.id === doc.id ? 'bg-nuren-pink text-white shadow-lg shadow-nuren-pink/20' : 'text-slate-600 hover:bg-slate-100'}`}
-                      >
-                        {doc.title}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Statements</h3>
-                  <div className="space-y-1">
-                    {governanceDocs.filter(d => d.category === 'Statement').map(doc => (
-                      <button
-                        key={doc.id}
-                        onClick={() => setSelectedDoc(doc)}
-                        className={`w-full text-left px-4 py-2 rounded-xl text-sm font-medium transition-all ${selectedDoc.id === doc.id ? 'bg-nuren-pink text-white shadow-lg shadow-nuren-pink/20' : 'text-slate-600 hover:bg-slate-100'}`}
-                      >
-                        {doc.title}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Content */}
-            <div className="lg:col-span-3">
-              <motion.div
-                key={selectedDoc.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="bg-white p-8 md:p-12 rounded-[40px] border border-slate-100 shadow-xl shadow-slate-200/50 min-h-[600px]"
-              >
-                <div className="inline-block px-3 py-1 bg-slate-100 text-slate-500 rounded-full text-xs font-bold mb-6 uppercase tracking-wider">
-                  {selectedDoc.category}
-                </div>
-                <h2 className="text-3xl font-bold text-slate-900 mb-8">{selectedDoc.title}</h2>
-                <div 
-                  className="prose prose-slate max-w-none prose-headings:text-slate-900 prose-p:text-slate-600 prose-li:text-slate-600 prose-h2:text-2xl prose-h2:mt-12 prose-h2:mb-6"
-                  dangerouslySetInnerHTML={{ __html: selectedDoc.content }}
-                />
-              </motion.div>
-            </div>
-          </div>
-        </div>
-      </section>
-    </div>
-  );
-};
-
-const InvestorsPage = () => {
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, []);
-
-  return (
-    <div className="pt-20">
-      <SEO
-        title="Investors | Nuren Group - Investor Relations & Governance"
-        description="Access key information about Nuren Group's performance, governance, and market announcements for our investor community."
-        keywords="investor relations, Nuren Group stock, financial performance, market announcements"
-        canonical="https://nurengroup.com/investors"
-        breadcrumbs={[
-          { name: 'Home', url: '/home' },
-          { name: 'Investors', url: '/investors' },
-        ]}
-      />
-
-      {/* Hero Section */}
-      <section className="py-24 bg-slate-50">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="max-w-3xl">
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="inline-block px-4 py-2 bg-nuren-pink/10 text-nuren-pink rounded-full text-sm font-bold mb-6"
-            >
-              Investor Relations
-            </motion.div>
-            <motion.h1 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-              className="text-5xl md:text-7xl font-bold text-slate-900 mb-8 leading-tight"
-            >
-              Transparency & <span className="text-nuren-pink">Growth</span>
-            </motion.h1>
-            <motion.p 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="text-xl text-slate-600 mb-10 leading-relaxed"
-            >
-              Nuren Group is committed to maintaining the highest standards of corporate governance and providing clear, timely information to our shareholders and the investment community.
-            </motion.p>
-          </div>
-        </div>
-      </section>
-
-      <Investors />
-      <BoardOfDirectors />
-
-      {/* Investment Highlights */}
-      <section className="py-24 bg-slate-900 text-white rounded-[64px] mx-6 mb-24">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold mb-4">Investment Highlights</h2>
-            <p className="text-slate-400 max-w-2xl mx-auto text-lg">
-              Why Nuren Group is positioned for long-term success in the digital economy.
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-8">
-            {[
-              {
-                title: "Market Leadership",
-                desc: "Malaysia's #1 parenting platform with a growing footprint across Southeast Asia."
-              },
-              {
-                title: "Scalable Model",
-                desc: "A community-powered commerce flywheel that drives efficient user acquisition and high lifetime value."
-              },
-              {
-                title: "Data Advantage",
-                desc: "Proprietary data insights that enable precision targeting and high-margin brand solutions."
-              }
-            ].map((item, idx) => (
-              <motion.div 
-                key={idx}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: idx * 0.1 }}
-                className="p-8 rounded-3xl bg-white/5 border border-white/10"
-              >
-                <h3 className="text-xl font-bold mb-4 text-nuren-pink">{item.title}</h3>
-                <p className="text-slate-400 leading-relaxed">{item.desc}</p>
-              </motion.div>
-            ))}
           </div>
         </div>
       </section>
@@ -2577,6 +2059,14 @@ const Home = ({ onContactClick }: { onContactClick: () => void }) => {
   );
 };
 
+// Client-side twin of the server's 301s for old investor URLs
+// (server/investors/redirects.js), for in-app links and `npm run dev`.
+const LegacyInvestorRedirect = () => {
+  const location = useLocation();
+  const target = legacyRedirect(location.pathname) || '/investors/corporate-governance';
+  return <Navigate to={target + location.search} replace />;
+};
+
 // --- Main App ---
 
 export default function App() {
@@ -2610,11 +2100,22 @@ export default function App() {
                     <Route path="/home" element={<Home onContactClick={() => setIsContactModalOpen(true)} />} />
                     <Route path="/ecosystem" element={<EcosystemPage onContactClick={() => setIsContactModalOpen(true)} />} />
                     <Route path="/products" element={<ProductsPage />} />
-                    <Route path="/investors" element={<InvestorsPage />} />
                     <Route path="/media-hub" element={<MediaHubPage onContactClick={() => setIsContactModalOpen(true)} />} />
+                    {/* Investor pages, ported from the Nuren investor site (src/components/Investors). */}
+                    <Route path="/investors/company" element={<CompanyInformationPage />} />
                     <Route path="/investors/corporate-governance" element={<CorporateGovernancePage />} />
-                    <Route path="/investors/governance-documents" element={<GovernanceDocumentsPage />} />
-                    <Route path="/investors/governance-documents/:docId" element={<GovernanceDocumentsPage />} />
+                    <Route path="/investors/corporate-governance/:slug" element={<GovernanceDocPage />} />
+                    <Route path="/investors/announcements" element={<AnnouncementsPage />} />
+                    <Route path="/investors/reports" element={<FinancialReportsPage />} />
+                    <Route path="/investors/prospectus" element={<ProspectusPage />} />
+                    <Route path="/investors/prospectus/preview" element={<ProspectusPreviewPage />} />
+                    <Route path="/pdf-viewer" element={<PdfViewerPage />} />
+                    <Route path="/investors" element={<LegacyInvestorRedirect />} />
+                    <Route path="/investors/companyinformation" element={<LegacyInvestorRedirect />} />
+                    <Route path="/investors/company-information" element={<LegacyInvestorRedirect />} />
+                    <Route path="/investors/finance-reports" element={<LegacyInvestorRedirect />} />
+                    <Route path="/investors/governance-documents" element={<LegacyInvestorRedirect />} />
+                    <Route path="/investors/governance-documents/:docId" element={<LegacyInvestorRedirect />} />
                     <Route path="/board-of-directors" element={<BoardOfDirectorsPage />} />
                     <Route path="/careers" element={<CareersPage />} />
                   </Routes>

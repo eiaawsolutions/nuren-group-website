@@ -1,0 +1,576 @@
+/* Investor pages, ported from the Nuren investor site's SCSS (company,
+   corporate-governance, _nsx-table, prospectus, pdf-viewer, citiesSkyline).
+   Values are kept as they were there; everything is scoped under .ir-root so
+   none of it reaches the rest of the site. Jost is the investor site's font;
+   Urbanist is its prospectus font. */
+
+.ir-root {
+  --ir-navy: #24315f;
+  --ir-brown: #a86a4f;
+  --ir-coral: #ee5174;
+  --ir-muted: #6b7280;
+  --ir-line: #e3e6ef;
+  --ir-link: #1f3b63;
+  --ir-value: #3d4a6b;
+  --ir-page: #eeeff5;
+}
+
+.ir-root,
+.ir-root * {
+  font-family: "Jost Variable", "Jost", sans-serif;
+  font-optical-sizing: auto;
+}
+
+/* ---- Page shell: grey page, white card, navy title bar, skyline ---- */
+
+.ir-page {
+  display: flex;
+  flex-direction: column;
+  background-color: var(--ir-page);
+  /* Clears the fixed navbar, like the site's other pages (pt-20). */
+  padding-top: 80px;
+}
+
+.ir-card {
+  display: flex;
+  flex-direction: column;
+  max-width: 1000px;
+  width: 95%;
+  align-self: center;
+  background-color: white;
+  box-shadow: 0px 3px 3px #e9ebef;
+  margin: 10px 0 50px;
+  border-radius: 5px;
+}
+
+.ir-card--padded {
+  padding: 40px 45px 50px;
+}
+
+.ir-card--wide {
+  max-width: 1040px;
+}
+
+.ir-banner-title {
+  font-size: 50px;
+  font-weight: 700;
+  padding: 10px 0;
+  line-height: 100%;
+  background-color: var(--ir-navy);
+  color: white;
+  text-align: center;
+  /* Bleed to the card edges (the card has 40px 45px padding). */
+  margin: -40px -45px 28px;
+  border-radius: 5px 5px 0 0;
+}
+
+.ir-card--company .ir-banner-title {
+  margin-bottom: 34px;
+}
+
+.ir-skyline {
+  background-image: url("/investors/skyscraper.png");
+  background-size: auto 200px;
+  background-repeat: repeat-x;
+  height: 200px;
+  margin-top: -30px;
+  opacity: 0.3;
+}
+
+@media (max-width: 600px) {
+  .ir-card--padded {
+    padding: 28px 22px 36px;
+  }
+  .ir-card--company {
+    padding: 28px 24px 36px;
+  }
+  .ir-banner-title {
+    font-size: 30px;
+    margin: -28px -22px 22px;
+  }
+  .ir-card--company .ir-banner-title {
+    margin: -28px -24px 26px;
+  }
+}
+
+/* ---- Company information ---- */
+
+.ir-ci-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  column-gap: 40px;
+  row-gap: 46px;
+}
+
+.ir-info-block {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Divider under the top row of the 2-column grid. */
+.ir-info-block:not(:nth-last-child(-n + 2)) {
+  padding-bottom: 46px;
+  border-bottom: 1px solid var(--ir-line);
+}
+
+.ir-info-block h2 {
+  color: var(--ir-brown);
+  font-weight: 400;
+  font-size: 30px;
+  line-height: 1.1;
+  margin-bottom: 26px;
+}
+
+.ir-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.ir-field {
+  display: flex;
+  flex-direction: column;
+}
+
+.ir-field-label {
+  display: block;
+  margin-bottom: 3px;
+  color: var(--ir-navy);
+  font-weight: 700;
+  font-size: 13px;
+  line-height: 1.3;
+}
+
+.ir-field-value {
+  color: var(--ir-value);
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.ir-field-line {
+  display: block;
+}
+
+.ir-field-link {
+  color: var(--ir-coral);
+  text-decoration: underline;
+  transition: 0.2s;
+}
+
+.ir-field-link:hover {
+  letter-spacing: 0.3px;
+}
+
+.ir-person-name {
+  display: block;
+  color: var(--ir-navy);
+  font-weight: 700;
+  font-size: 16px;
+  line-height: 1.3;
+}
+
+.ir-person-role {
+  display: block;
+  margin-top: 2px;
+  color: var(--ir-brown);
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+@media (max-width: 600px) {
+  .ir-info-block h2 {
+    font-size: 26px;
+  }
+}
+
+@media (max-width: 560px) {
+  .ir-ci-grid {
+    grid-template-columns: 1fr;
+    row-gap: 34px;
+  }
+  .ir-info-block:not(:nth-last-child(-n + 2)) {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+}
+
+/* ---- Investment & governance ---- */
+
+.ir-card--governance {
+  align-items: center;
+  overflow: hidden;
+  z-index: 2;
+  padding-bottom: 20px;
+}
+
+.ir-card--governance h1 {
+  font-size: 50px;
+  font-weight: 700;
+  padding: 10px 0;
+  line-height: 100%;
+  background-color: var(--ir-navy);
+  color: white;
+  width: 100%;
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+.ir-linkbox {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding: 20px 30px;
+}
+
+.ir-linkbox h2 {
+  font-size: 22px;
+  color: var(--ir-navy);
+  font-weight: normal;
+  margin-bottom: 20px;
+}
+
+.ir-links {
+  display: grid;
+  /* min(…, 100%) keeps the 350px columns from overflowing a phone screen. */
+  grid-template-columns: repeat(auto-fit, minmax(min(350px, 100%), 1fr));
+  gap: 10px;
+}
+
+.ir-links a {
+  color: black;
+  transition: 0.2s;
+  font-size: 18px;
+}
+
+.ir-links a:hover {
+  text-decoration: underline;
+  letter-spacing: 1px;
+}
+
+/* ---- NSX-style announcements / reports table ---- */
+
+.ir-pager {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.ir-pg-btn {
+  background: none;
+  border: none;
+  color: var(--ir-navy);
+  font-size: 15px;
+  line-height: 1;
+  padding: 4px 2px;
+  cursor: pointer;
+  transition: 0.15s;
+}
+
+.ir-pg-btn:hover:not(:disabled) {
+  color: var(--ir-coral);
+}
+
+.ir-pg-btn:disabled {
+  color: #c4c9d6;
+  cursor: default;
+}
+
+.ir-pg-count {
+  font-size: 14px;
+  color: var(--ir-navy);
+  padding: 0 6px;
+  min-width: 40px;
+  text-align: center;
+}
+
+.ir-pg-size {
+  margin-left: 8px;
+  border: none;
+  border-bottom: 1px solid var(--ir-navy);
+  background: transparent;
+  color: var(--ir-navy);
+  font-size: 14px;
+  padding: 2px 4px;
+  cursor: pointer;
+}
+
+.ir-pg-size:focus {
+  outline: none;
+  border-bottom-color: var(--ir-coral);
+}
+
+.ir-table {
+  border-top: 1px solid var(--ir-line);
+}
+
+.ir-head,
+.ir-row {
+  display: grid;
+  grid-template-columns: 96px 1fr 150px;
+  column-gap: 18px;
+  align-items: start;
+}
+
+.ir-head {
+  padding: 14px 0 12px;
+  border-bottom: 2px solid var(--ir-line);
+}
+
+.ir-head span {
+  color: var(--ir-navy);
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.ir-head .ir-date {
+  text-align: right;
+}
+
+.ir-row {
+  padding: 18px 0;
+  border-bottom: 1px solid var(--ir-line);
+}
+
+.ir-code {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding-top: 2px;
+}
+
+.ir-ticker {
+  color: var(--ir-coral);
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.ir-body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 4px;
+}
+
+.ir-headline {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 7px;
+  color: var(--ir-link);
+  font-weight: 600;
+  font-size: 16px;
+  line-height: 1.35;
+  text-decoration: underline;
+  text-decoration-color: var(--ir-line);
+  text-underline-offset: 2px;
+  transition: 0.15s;
+}
+
+.ir-headline svg {
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.ir-headline span {
+  word-break: break-word;
+}
+
+.ir-headline:hover {
+  color: var(--ir-coral);
+}
+
+.ir-desc {
+  color: #4a5878;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.ir-date {
+  display: flex;
+  flex-direction: column;
+  white-space: nowrap;
+  text-align: right;
+  gap: 2px;
+  align-items: flex-end;
+}
+
+.ir-date-main {
+  color: #1f2937;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.ir-time {
+  color: var(--ir-muted);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.ir-empty {
+  padding: 40px 0;
+  text-align: center;
+  color: var(--ir-muted);
+}
+
+@media (max-width: 640px) {
+  .ir-row {
+    grid-template-columns: 70px 1fr;
+    row-gap: 6px;
+  }
+  .ir-row .ir-date {
+    grid-column: 1 / -1;
+    text-align: left;
+    flex-direction: row;
+    gap: 8px;
+    align-items: flex-start;
+  }
+}
+
+/* ---- Inline PDF viewer ---- */
+
+.ir-pdf-viewer {
+  display: flex;
+  flex-direction: column;
+  background-color: var(--ir-page);
+  padding-top: 80px;
+  min-height: 100vh;
+}
+
+.ir-pv-frame {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  width: 100%;
+  align-self: center;
+  max-width: 1100px;
+  padding: 16px;
+}
+
+.ir-pv-document {
+  width: 100%;
+  /* Fills the window under the site's top bar and navbar. */
+  height: calc(100vh - 150px);
+  border: none;
+  border-radius: 4px;
+  background: white;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
+}
+
+.ir-pv-fallback {
+  margin: 60px auto;
+  color: var(--ir-muted);
+  text-align: center;
+}
+
+/* Discourage printing the wrapper page: hide the document when printed. */
+@media print {
+  .ir-pdf-viewer .ir-pv-document {
+    display: none !important;
+  }
+  .ir-pdf-viewer .ir-pv-frame::after {
+    content: "Printing is disabled for this document.";
+    display: block;
+    padding: 40px;
+    text-align: center;
+    color: #333;
+  }
+}
+
+/* ---- Prospectus ---- */
+
+.ir-prospectus {
+  display: flex;
+  flex-direction: column;
+  background-color: white;
+  padding-top: 80px;
+}
+
+.ir-prospectus-banner {
+  display: flex;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.ir-prospectus-banner img {
+  width: 100%;
+  object-fit: cover;
+  object-position: center bottom;
+  min-height: 160px;
+}
+
+.ir-prospectus-content {
+  display: flex;
+  flex-direction: column;
+  margin: auto;
+  width: 100%;
+  max-width: 1200px;
+  padding: 75px 20px;
+  color: black;
+}
+
+.ir-prospectus-content section {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 35px;
+}
+
+.ir-prospectus-content h3 {
+  font-family: "Urbanist Variable", "Urbanist", sans-serif;
+  font-size: 22px;
+  color: #282127;
+  font-weight: normal;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+}
+
+.ir-prospectus-content p,
+.ir-prospectus-content li {
+  font-size: 18px;
+  opacity: 0.7;
+  font-family: "Urbanist Variable", "Urbanist", sans-serif;
+  text-align: justify;
+}
+
+.ir-prospectus-content ul {
+  padding-left: 20px;
+  list-style: disc;
+}
+
+.ir-prospectus-content li {
+  margin-top: 10px;
+}
+
+.ir-prospectus-content li a {
+  word-wrap: break-word;
+  text-decoration: underline;
+}
+
+.ir-prospectus-content hr {
+  margin: 30px 0 20px;
+  border: 1px dashed black;
+  opacity: 0.1;
+}
+
+.ir-ipo-ended {
+  background-color: rgb(255, 240, 250);
+  padding: 10px 20px;
+  border: solid 1px rgb(236, 208, 227);
+  color: #f25075;
+}
+
+/* ---- Prospectus preview (Google Drive embed) ---- */
+
+.ir-pdf-reader {
+  height: 100vh;
+  min-height: 1000px;
+  position: relative;
+  padding-top: 80px;
+}
+
+.ir-pdf-reader iframe {
+  border: none;
+  overflow: hidden;
+  width: 100%;
+  height: 100%;
+}
