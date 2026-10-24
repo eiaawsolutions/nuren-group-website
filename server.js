@@ -8,6 +8,7 @@ import { LRUCache } from 'lru-cache';
 import { escapeHtml } from './server/html.js';
 import { createRateLimiter } from './server/rate-limit.js';
 import { secretsMatch } from './server/secure-compare.js';
+import { clientIp } from './server/client-ip.js';
 import { NURA_SYSTEM_PROMPT, NURA_PROMPT_VERSION } from './server/nura/prompt.js';
 import { detectReplyLanguage } from './server/nura/language.js';
 import { replyCopy, finalizeReply } from './server/nura/replies.js';
@@ -57,12 +58,6 @@ const ENQUIRY_RATE_MAX = 5;
 const ADMIN_RATE_WINDOW_MS = 60_000;
 const ADMIN_RATE_MAX = 10;
 
-// Proxies between the visitor and this app: Railway's edge only. `trust proxy`
-// set to `true` would take the left-most X-Forwarded-For entry, which the
-// visitor controls; a hop count takes the address the edge itself added.
-// Putting another proxy (Cloudflare, say) in front means raising this to 2.
-const TRUSTED_PROXY_HOPS = 1;
-
 const RING_BUFFER_SIZE = 50;
 const RATE_LIMIT_MAX_KEYS = 10_000;
 const ADMIN_LOCKOUT_FAILS = 5;
@@ -88,12 +83,6 @@ function logError(scope, detail) {
 
 const leadStore = createLeadStore({ dir: LEADS_DIR, onError: logError });
 
-// Rate limits and the admin lockout key on this. req.ip honours exactly one
-// proxy hop (see TRUSTED_PROXY_HOPS), so it is the address Railway's edge saw,
-// never a value the visitor typed into their own X-Forwarded-For.
-function clientIp(req) {
-  return req.ip || 'unknown';
-}
 
 function isEmail(value) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
@@ -161,7 +150,8 @@ function adminAuth(req, res, next) {
 
 const app = express();
 app.disable('x-powered-by');
-app.set('trust proxy', TRUSTED_PROXY_HOPS);
+// No `trust proxy`: nothing reads req.ip. Visitor IPs come from clientIp()
+// (server/client-ip.js), which uses Railway's X-Real-IP.
 
 // Security headers — closes the "first finding any pentester would flag":
 // CSP, HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy (Helmet)
