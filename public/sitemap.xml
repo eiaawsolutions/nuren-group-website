@@ -25,32 +25,122 @@
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://nurengroup.com/investors</loc>
-    <lastmod>2026-04-08</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
     <loc>https://nurengroup.com/media-hub</loc>
     <lastmod>2026-04-08</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
+    <loc>https://nurengroup.com/investors/company</loc>
+    <lastmod>2026-10-24</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://nurengroup.com/investors/corporate-governance</loc>
-    <lastmod>2026-04-08</lastmod>
+    <lastmod>2026-10-24</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://nurengroup.com/investors/governance-documents</loc>
-    <lastmod>2026-04-08</lastmod>
+    <loc>https://nurengroup.com/investors/corporate-governance/audit-and-risk-committee-charter</loc>
+    <lastmod>2026-10-24</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://nurengroup.com/investors/corporate-governance/board-charter</loc>
+    <lastmod>2026-10-24</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://nurengroup.com/investors/corporate-governance/nomination-and-remuneration-committee-charter</loc>
+    <lastmod>2026-10-24</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://nurengroup.com/investors/corporate-governance/anti-bribery-and-corruption-policy</loc>
+    <lastmod>2026-10-24</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://nurengroup.com/investors/corporate-governance/diversity-policy</loc>
+    <lastmod>2026-10-24</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://nurengroup.com/investors/corporate-governance/code-of-conduct</loc>
+    <lastmod>2026-10-24</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://nurengroup.com/investors/corporate-governance/oh-and-s-policy</loc>
+    <lastmod>2026-10-24</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://nurengroup.com/investors/corporate-governance/communication-and-disclosure-policy</loc>
+    <lastmod>2026-10-24</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://nurengroup.com/investors/corporate-governance/risk-management-policy</loc>
+    <lastmod>2026-10-24</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://nurengroup.com/investors/corporate-governance/corporate-governance-statement</loc>
+    <lastmod>2026-10-24</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://nurengroup.com/investors/corporate-governance/securities-trading-policy</loc>
+    <lastmod>2026-10-24</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://nurengroup.com/investors/corporate-governance/delegation-of-authority-policy</loc>
+    <lastmod>2026-10-24</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://nurengroup.com/investors/corporate-governance/statement-of-values</loc>
+    <lastmod>2026-10-24</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://nurengroup.com/investors/announcements</loc>
+    <lastmod>2026-10-24</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://nurengroup.com/investors/reports</loc>
+    <lastmod>2026-10-24</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://nurengroup.com/investors/prospectus</loc>
+    <lastmod>2026-10-24</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.4</priority>
   </url>
   <url>
     <loc>https://nurengroup.com/board-of-directors</loc>
-    <lastmod>2026-04-08</lastmod>
+    <lastmod>2026-10-06</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>

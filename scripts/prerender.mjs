@@ -11,23 +11,28 @@ import PuppeteerRenderer from '@prerenderer/renderer-puppeteer';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { allGovernanceDocs } from '../src/data/investors/governanceDocs.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DIST_DIR = join(__dirname, '..', 'dist');
 
 // Routes that should be prerendered. Mirrors the <Route> list in
-// src/App.tsx and the URLs in public/sitemap.xml. Skip /admin (auth-gated)
-// and any route with a dynamic param (governance-documents/:docId) — those
-// are fine as runtime SPA routes.
+// src/App.tsx and the URLs in public/sitemap.xml. Skip /admin (auth-gated),
+// /pdf-viewer (needs a ?src=) and the legacy investor URLs (server 301s).
+// The governance document pages have a known, fixed set of slugs, so they
+// are prerendered too.
 const ROUTES = [
   '/',          // cinematic landing splash (HeroLanding)
   '/home',      // the rich Nuren Group home page (was at "/")
   '/ecosystem',
   '/products',
-  '/investors',
   '/media-hub',
+  '/investors/company',
   '/investors/corporate-governance',
-  '/investors/governance-documents',
+  ...allGovernanceDocs.map((doc) => `/investors/corporate-governance/${doc.slug}`),
+  '/investors/announcements',
+  '/investors/reports',
+  '/investors/prospectus',
   '/board-of-directors',
   '/careers',
 ];

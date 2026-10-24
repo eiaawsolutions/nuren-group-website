@@ -40,9 +40,10 @@ Mission: Connect brands with highly engaged families through trusted platforms, 
 
 - [Ecosystem](https://nurengroup.com/ecosystem) — full product overview
 - [Products](https://nurengroup.com/products) — individual product cards
-- [Investors](https://nurengroup.com/investors) — investor relations hub
-- [Corporate Governance](https://nurengroup.com/investors/corporate-governance)
-- [Governance Documents](https://nurengroup.com/investors/governance-documents)
+- [Company Information](https://nurengroup.com/investors/company) — Nuren Group Limited (NSX: NRN) company details, advisers and people
+- [Corporate Governance](https://nurengroup.com/investors/corporate-governance) — committee charters and governance documents
+- [Announcements](https://nurengroup.com/investors/announcements) — market announcements filed with the NSX
+- [Financial Reports](https://nurengroup.com/investors/reports) — quarterly, half-yearly, preliminary and annual reports
 - [Board of Directors](https://nurengroup.com/board-of-directors)
 - [Media Hub](https://nurengroup.com/media-hub) — news, press, insights
 - [Careers](https://nurengroup.com/careers)
