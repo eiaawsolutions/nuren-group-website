@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { validateBrief, fillEmpty, EMPTY_ENQUIRY, isCampaignType, ENQUIRY_TYPES } from './enquiryClient';
+import { validateBrief, fillEmpty, prefillFor, EMPTY_ENQUIRY, isCampaignType, ENQUIRY_TYPES } from './enquiryClient';
 
 describe('validateBrief', () => {
   it('accepts the document and image types a brief usually comes in', () => {
@@ -27,6 +27,19 @@ describe('fillEmpty', () => {
   it('ignores values that are not strings', () => {
     const next = fillEmpty(EMPTY_ENQUIRY, { company: undefined, type: 5 as unknown as string });
     expect(next).toEqual(EMPTY_ENQUIRY);
+  });
+});
+
+describe('prefillFor', () => {
+  it('sets what the enquiry is about, and fills the rest only where empty', () => {
+    const current = { ...EMPTY_ENQUIRY, type: 'advertising', name: 'Mei Lin', message: 'Already typed' };
+    const next = prefillFor(current, { type: 'career', message: 'Marketing Intern Application' });
+    expect(next).toMatchObject({ type: 'career', name: 'Mei Lin', message: 'Already typed' });
+    expect(prefillFor(EMPTY_ENQUIRY, { type: 'career', message: 'Marketing Intern Application' }).message).toBe('Marketing Intern Application');
+  });
+
+  it('ignores a type the form does not offer', () => {
+    expect(prefillFor(EMPTY_ENQUIRY, { type: 'nope' }).type).toBe('');
   });
 });
 

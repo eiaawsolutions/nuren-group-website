@@ -12,6 +12,8 @@ export const ENQUIRY_TYPES = {
   partnership: 'Partnership',
   creator: 'Creator opportunity',
   press: 'Press or media',
+  // The careers page's APPLY buttons open the form on this type.
+  career: 'Job application',
   other: 'Other',
 };
 

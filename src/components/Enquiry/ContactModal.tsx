@@ -2,17 +2,29 @@ import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, CheckCircle2, MessageCircle } from 'lucide-react';
 import { EnquiryForm } from './EnquiryForm';
-import { useEnquiryForm } from './enquiryClient';
+import { useEnquiryForm, type EnquiryValues } from './enquiryClient';
 
 const WHATSAPP_URL = 'https://wa.me/60124238768';
 
 /**
  * The site-wide "Contact Us" window. It sends the same enquiry as the chat's
  * "Talk to our team" form, so every lead reaches the sales team in one format.
+ * `draft` opens it for something specific, e.g. a job application.
  */
-export const ContactModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => {
+export const ContactModal = ({ isOpen, onClose, draft = null }: {
+  isOpen: boolean;
+  onClose: () => void;
+  draft?: Partial<EnquiryValues> | null;
+}) => {
   const form = useEnquiryForm();
   const [sent, setSent] = useState(false);
+  const { prefill } = form;
+
+  useEffect(() => {
+    if (isOpen && draft) prefill(draft);
+    // `prefill` is a new function every render; the draft is what matters.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, draft]);
 
   useEffect(() => {
     if (!isOpen) return;

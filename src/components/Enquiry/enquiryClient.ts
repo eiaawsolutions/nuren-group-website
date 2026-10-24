@@ -66,6 +66,15 @@ export function fillEmpty(current: EnquiryValues, draft: Partial<EnquiryValues>)
   return next;
 }
 
+/**
+ * Opening the form for something specific (e.g. a job's APPLY button): that
+ * decides what the enquiry is about; other fields fill only where empty.
+ */
+export function prefillFor(current: EnquiryValues, draft: Partial<EnquiryValues>): EnquiryValues {
+  const next = fillEmpty(current, draft);
+  return draft.type && draft.type in ENQUIRY_TYPES ? { ...next, type: draft.type } : { ...next, type: current.type };
+}
+
 export function useEnquiryForm() {
   const [values, setValues] = useState<EnquiryValues>(EMPTY_ENQUIRY);
   const [file, setFile] = useState<File | null>(null);
@@ -75,6 +84,7 @@ export function useEnquiryForm() {
     setFile,
     set: <K extends keyof EnquiryValues>(key: K, value: EnquiryValues[K]) => setValues((v) => ({ ...v, [key]: value })),
     applyDraft: (draft: Partial<EnquiryValues>) => setValues((v) => fillEmpty(v, draft)),
+    prefill: (draft: Partial<EnquiryValues>) => setValues((v) => prefillFor(v, draft)),
     /** After "new chat": same visitor, so keep who they are but drop the campaign and message. */
     clearCampaign: () => {
       setValues((v) => ({ ...v, type: '', audience: '', period: '', budget: '', message: '' }));

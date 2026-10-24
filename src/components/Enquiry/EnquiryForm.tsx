@@ -76,6 +76,8 @@ export function EnquiryForm({ form, source, transcript = [], notice, onSent }: P
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [includeChat, setIncludeChat] = useState(true);
   const showCampaign = isCampaignType(values.type);
+  // A job application attaches a resume; everything else, a brief.
+  const fileNoun = values.type === 'career' ? 'resume' : 'brief';
 
   const validate = () => {
     const errs: Record<string, string> = {};
@@ -208,7 +210,7 @@ export function EnquiryForm({ form, source, transcript = [], notice, onSent }: P
       </Field>
 
       <Field
-        label="Attach your brief"
+        label={`Attach your ${fileNoun}`}
         hint={`Optional. ${ATTACHMENT_EXTENSIONS.filter((ext) => ext !== 'jpeg').join(', ').toUpperCase()}, up to 4 MB.`}
         error={errors.attachment}
       >
@@ -220,7 +222,7 @@ export function EnquiryForm({ form, source, transcript = [], notice, onSent }: P
               type="button"
               onClick={() => form.setFile(null)}
               disabled={submitting}
-              aria-label="Remove attached brief"
+              aria-label={`Remove attached ${fileNoun}`}
               className="rounded-full p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
             >
               <X size={14} />
