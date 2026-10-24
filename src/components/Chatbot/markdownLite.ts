@@ -41,7 +41,8 @@ const text = (value: string): Inline => ({ type: 'text', text: value });
 /** Allow only this site's paths, http(s) and mailto; everything else is dropped. */
 export function safeHref(href: string): { href: string; external: boolean } | null {
   const target = href.trim();
-  if (/^\/(?!\/)/.test(target)) return { href: target, external: false };
+  // Browsers read "\" as "/", so "/\evil.com" would leave the site like "//evil.com".
+  if (/^\/(?!\/)[^\\]*$/.test(target)) return { href: target, external: false };
   if (/^https?:\/\/[^\s]+$/i.test(target)) return { href: target, external: true };
   if (/^mailto:[^\s@]+@[^\s@]+$/i.test(target)) return { href: target, external: true };
   return null;

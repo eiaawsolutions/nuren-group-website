@@ -13,6 +13,7 @@ interface Status {
     chatModelKey: string;
     chatEffort: string | null;
     promptVersion: string;
+    yourIp: string;
   };
   knowledgeBase: string;
   usage: NuraUsage;
@@ -91,7 +92,7 @@ export function AdminPage() {
       sessionStorage.setItem(STORAGE_KEY, password);
       setAuthed(true);
     } catch {
-      setLoginError('Invalid password, or admin not configured. Set SUPERADMIN_PASSWORD in Railway and try again.');
+      setLoginError('Invalid password, or admin access is not set up yet.');
     } finally {
       setLoginBusy(false);
     }
@@ -250,6 +251,12 @@ export function AdminPage() {
                 label="Model key · effort · prompt version"
                 value={`NURA_MODEL=${status.settings.chatModelKey} · ${status.settings.chatEffort ?? 'n/a'} · ${status.settings.promptVersion}`}
                 ok
+              />
+              <SettingRow
+                label="Your IP, as rate limits see it"
+                value={status.settings.yourIp}
+                ok
+                note="Should be your own public IP. A Railway address would mean all visitors share one limit."
               />
             </section>
 

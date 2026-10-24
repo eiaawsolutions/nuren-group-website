@@ -141,4 +141,9 @@ describe('safeHref', () => {
     expect(safeHref('data:text/html,hi')).toBeNull();
     expect(safeHref('//evil.example')).toBeNull();
   });
+
+  it('rejects backslash paths, which browsers read as protocol-relative', () => {
+    expect(safeHref('/\\evil.example')).toBeNull();
+    expect(safeHref('/careers\\..\\evil')).toBeNull();
+  });
 });

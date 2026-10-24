@@ -7,6 +7,7 @@ import helmet from 'helmet';
 import { LRUCache } from 'lru-cache';
 import { escapeHtml } from './server/html.js';
 import { createRateLimiter } from './server/rate-limit.js';
+import { secretsMatch } from './server/secure-compare.js';
 import { NURA_SYSTEM_PROMPT, NURA_PROMPT_VERSION } from './server/nura/prompt.js';
 import { detectReplyLanguage } from './server/nura/language.js';
 import { replyCopy, finalizeReply } from './server/nura/replies.js';
@@ -56,6 +57,12 @@ const ENQUIRY_RATE_MAX = 5;
 const ADMIN_RATE_WINDOW_MS = 60_000;
 const ADMIN_RATE_MAX = 10;
 
+// Proxies between the visitor and this app: Railway's edge only. `trust proxy`
+// set to `true` would take the left-most X-Forwarded-For entry, which the
+// visitor controls; a hop count takes the address the edge itself added.
+// Putting another proxy (Cloudflare, say) in front means raising this to 2.
+const TRUSTED_PROXY_HOPS = 1;
+
 const RING_BUFFER_SIZE = 50;
 const RATE_LIMIT_MAX_KEYS = 10_000;
 const ADMIN_LOCKOUT_FAILS = 5;
@@ -81,9 +88,9 @@ function logError(scope, detail) {
 
 const leadStore = createLeadStore({ dir: LEADS_DIR, onError: logError });
 
-// Trust Express's req.ip — with `app.set('trust proxy', true)`, it walks the
-// X-Forwarded-For chain correctly. Reading XFF directly is spoofable: any
-// client can send `X-Forwarded-For: 1.2.3.4` to bypass per-IP rate limits.
+// Rate limits and the admin lockout key on this. req.ip honours exactly one
+// proxy hop (see TRUSTED_PROXY_HOPS), so it is the address Railway's edge saw,
+// never a value the visitor typed into their own X-Forwarded-For.
 function clientIp(req) {
   return req.ip || 'unknown';
 }
@@ -102,15 +109,6 @@ function maskSecret(value) {
   if (isPlaceholder(value)) return value;
   if (value.length <= 8) return '*'.repeat(value.length);
   return `${'*'.repeat(value.length - 4)}${value.slice(-4)}`;
-}
-
-function timingSafeEqual(a, b) {
-  if (a.length !== b.length) return false;
-  let result = 0;
-  for (let i = 0; i < a.length; i += 1) {
-    result |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  }
-  return result === 0;
 }
 
 function adminAuth(req, res, next) {
@@ -150,7 +148,7 @@ function adminAuth(req, res, next) {
   const sep = decoded.indexOf(':');
   const supplied = sep === -1 ? decoded : decoded.slice(sep + 1);
 
-  if (!timingSafeEqual(supplied, expected)) {
+  if (!secretsMatch(supplied, expected)) {
     adminFailures.set(ip, fails + 1);
     res.set('WWW-Authenticate', 'Basic realm="Nuren Admin", charset="UTF-8"');
     return res.status(401).json({ error: 'Invalid credentials.' });
@@ -163,13 +161,14 @@ function adminAuth(req, res, next) {
 
 const app = express();
 app.disable('x-powered-by');
-app.set('trust proxy', true);
+app.set('trust proxy', TRUSTED_PROXY_HOPS);
 
 // Security headers — closes the "first finding any pentester would flag":
-// CSP, HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy,
-// Permissions-Policy. CSP allows inline styles (Tailwind injects them) and
-// connections to api.anthropic.com isn't needed because the chat call goes
-// server-side; the only outbound from the browser is to this same origin.
+// CSP, HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy (Helmet)
+// and Permissions-Policy (below; Helmet doesn't set it). CSP allows inline
+// styles (Tailwind injects them) and connections to api.anthropic.com aren't
+// needed because the chat call goes server-side; the only outbound from the
+// browser is to this same origin.
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
@@ -196,6 +195,22 @@ app.use(helmet({
   // (no-referrer) strips it, causing Error 153.
   referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
 }));
+
+// The site uses none of these browser features, so no page or embed may ask for them.
+const PERMISSIONS_POLICY = [
+  'camera=()', 'microphone=()', 'geolocation=()', 'payment=()', 'usb=()', 'browsing-topics=()',
+].join(', ');
+app.use((_req, res, next) => {
+  res.set('Permissions-Policy', PERMISSIONS_POLICY);
+  next();
+});
+
+// Admin responses carry visitors' contact details (a PDPA data store): never
+// cache them in the browser or any proxy, and keep the URLs out of search.
+app.use('/admin/api', (_req, res, next) => {
+  res.set({ 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex, nofollow' });
+  next();
+});
 
 // An enquiry can carry an attached brief, so it gets a larger body limit than
 // the rest of the API. The per-IP rate limit runs first, before the body is
@@ -428,12 +443,15 @@ async function deliverLeadEmail(lead, attachment, meta) {
 }
 
 // Admin API — all guarded by Basic Auth.
-app.get('/admin/api/status', adminAuth, (_req, res) => {
+app.get('/admin/api/status', adminAuth, (req, res) => {
   const anthropic = process.env.ANTHROPIC_API_KEY;
   const resend = process.env.RESEND_API_KEY;
 
   res.json({
     settings: {
+      // What rate limits key on for this request. It should be the admin's own
+      // public IP; a Railway address here would mean every visitor shares one limit.
+      yourIp: clientIp(req),
       anthropicKey: { set: !isPlaceholder(anthropic), masked: maskSecret(anthropic || '') },
       resendKey: { set: !isPlaceholder(resend), masked: maskSecret(resend || '') },
       enquiryFromEmail: ENQUIRY_FROM_EMAIL,
